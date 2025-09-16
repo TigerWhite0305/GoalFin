@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Calendar, DollarSign, Type, FileText, Repeat, Clock, CheckCircle2 } from "lucide-react";
-import { Transaction } from "../contexts/FinanceContext"; // Usa il tipo dal context
+
+// Type definitions
+export type Transaction = {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+  date: string;
+  amount: number;
+  type: "income" | "expense";
+  color?: string;
+};
 
 export type TransactionModalProps = {
   transaction?: Transaction;
@@ -24,9 +35,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [selectedColor, setSelectedColor] = useState(transaction?.color ?? "#6366f1");
 
   // Stati per la transazione ricorrente
-  const [isRecurring, setIsRecurring] = useState(transaction?.isRecurring ?? false);
-  const [frequency, setFrequency] = useState(transaction?.recurringInfo?.frequency ?? 1);
-  const [duration, setDuration] = useState<string>(transaction?.recurringInfo?.duration ?? "1");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [frequency, setFrequency] = useState(1);
+  const [duration, setDuration] = useState<string>("1");
 
   // Blocca lo scroll della pagina quando il modal è aperto
   useEffect(() => {
@@ -66,16 +77,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setAmount(transaction?.amount ?? 0);
     setType(transaction?.type ?? "expense");
     setSelectedColor(transaction?.color ?? "#6366f1");
-    setIsRecurring(transaction?.isRecurring ?? false);
-    setFrequency(transaction?.recurringInfo?.frequency ?? 1);
-    setDuration(transaction?.recurringInfo?.duration ?? "1");
   }, [transaction]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newTx: Transaction = {
-      id: isNew ? "" : transaction!.id, // Il context genererà l'ID se vuoto
+    const newTx: Transaction & { recurring?: { frequency: number; duration: string } } = {
+      id: isNew ? Date.now() : transaction!.id,
       name,
       category,
       description,
@@ -83,8 +91,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       amount,
       type,
       color: selectedColor,
-      isRecurring,
-      recurringInfo: isRecurring ? { frequency, duration } : undefined,
+      recurring: isRecurring ? { frequency, duration } : undefined,
     };
 
     onSave(newTx);
@@ -97,6 +104,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const currentCategories = categoryOptions[type];
+  const selectedCategoryData = currentCategories.find(cat => cat.name === category);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -303,11 +311,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             </div>
           )}
-        </div>
 
-        {/* Footer con bottoni fisso in basso */}
-        <div className="p-4 sm:p-6 border-t border-slate-700/50 flex-shrink-0">
-          <div className="flex flex-col sm:flex-row justify-end gap-3">
+          {/* Buttons */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-700/50 flex-shrink-0">
             <button
               type="button"
               className="px-6 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-slate-300 font-semibold hover:bg-slate-600/50 hover:text-white transition-all"
@@ -317,7 +323,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               onClick={handleSubmit}
             >
               <CheckCircle2 className="w-5 h-5" />
@@ -326,13 +332,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
         </div>
       </div>
-      
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(51,65,85,0.3); border-radius:3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71,85,105,0.8); border-radius:3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(71,85,105,1); }
-      `}</style>
     </div>
   );
 };

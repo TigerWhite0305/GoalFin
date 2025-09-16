@@ -1,78 +1,41 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useFinance } from "../../contexts/FinanceContext";
 import { TransactionModal } from "../TransactionModal";
-import type { Transaction } from "../../contexts/FinanceContext";
+
+// Definizione del tipo Transaction per TypeScript
+export type Transaction = {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+  date: string; // ISO string
+  amount: number;
+  type: "income" | "expense";
+  color?: string;
+};
+
+const sampleTransactions: Transaction[] = [
+  { id: 1, name: "Affitto", category: "Casa", description: "Pagamento mensile affitto appartamento", date: "2025-09-01T09:15:00", amount: 350, type: "expense", color: "#4C6FFF" },
+  { id: 2, name: "Stipendio", category: "Lavoro", description: "Pagamento stipendio mensile", date: "2025-09-05T18:00:00", amount: 2000, type: "income", color: "#16A34A" },
+  { id: 3, name: "Spesa Supermercato", category: "Cibo", description: "Spesa settimanale supermercato", date: "2025-09-07T12:45:00", amount: 120, type: "expense", color: "#F59E0B" },
+  { id: 4, name: "Freelance", category: "Lavoro", description: "Progetto web development", date: "2025-09-10T14:30:00", amount: 800, type: "income", color: "#8B5CF6" },
+  { id: 5, name: "Ristorante", category: "Cibo", description: "Cena con amici", date: "2025-09-12T20:00:00", amount: 85, type: "expense", color: "#EF4444" },
+  { id: 6, name: "Benzina", category: "Trasporti", description: "Rifornimento auto", date: "2025-09-14T08:15:00", amount: 65, type: "expense", color: "#F97316" },
+];
 
 export const TransactionsList: React.FC = () => {
-  const { state, addTransaction, updateTransaction, deleteTransaction } = useFinance();
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>(sampleTransactions);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number; placement: "top" | "bottom" } | null>(null);
   const [modalTx, setModalTx] = useState<Transaction | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   // mappa id -> button element
-  const buttonRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+  const buttonRefs = useRef<Map<number, HTMLButtonElement | null>>(new Map());
 
   const MENU_HEIGHT = 160;
   const MENU_WIDTH = 160;
-
-  // Usa le transazioni dal context, o dati di esempio se vuoto
-  const sampleTransactions: Transaction[] = [
-    { 
-      id: "sample-1", 
-      name: "Affitto", 
-      category: "Casa", 
-      description: "Pagamento mensile affitto appartamento", 
-      date: "2025-09-01T09:15:00", 
-      amount: 350, 
-      type: "expense", 
-      color: "#4C6FFF" 
-    },
-    { 
-      id: "sample-2", 
-      name: "Stipendio", 
-      category: "Lavoro", 
-      description: "Pagamento stipendio mensile", 
-      date: "2025-09-05T18:00:00", 
-      amount: 2000, 
-      type: "income", 
-      color: "#16A34A" 
-    },
-    { 
-      id: "sample-3", 
-      name: "Spesa Supermercato", 
-      category: "Cibo", 
-      description: "Spesa settimanale supermercato", 
-      date: "2025-09-07T12:45:00", 
-      amount: 120, 
-      type: "expense", 
-      color: "#F59E0B" 
-    },
-    { 
-      id: "sample-4", 
-      name: "Freelance", 
-      category: "Lavoro", 
-      description: "Progetto web development", 
-      date: "2025-09-10T14:30:00", 
-      amount: 800, 
-      type: "income", 
-      color: "#8B5CF6" 
-    },
-    { 
-      id: "sample-5", 
-      name: "Ristorante", 
-      category: "Cibo", 
-      description: "Cena con amici", 
-      date: "2025-09-12T20:00:00", 
-      amount: 85, 
-      type: "expense", 
-      color: "#EF4444" 
-    },
-  ];
-
-  const transactions = state.transactions.length > 0 ? state.transactions : sampleTransactions;
 
   useEffect(() => {
     if (openMenuId != null && !transactions.some((t) => t.id === openMenuId)) {
@@ -93,17 +56,17 @@ export const TransactionsList: React.FC = () => {
     return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 300));
-    deleteTransaction(id);
+    setTransactions((prev) => prev.filter((tx) => tx.id !== id));
     setOpenMenuId(null);
     setMenuCoords(null);
     setIsLoading(false);
   };
 
   // Calcola posizione del menu basandosi sul bounding rect del bottone
-  const handleToggleMenu = (e: React.MouseEvent, id: string) => {
+  const handleToggleMenu = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
 
     if (openMenuId === id) {
@@ -132,11 +95,12 @@ export const TransactionsList: React.FC = () => {
   };
 
   const handleSave = (tx: Transaction) => {
-    if (transactions.some(t => t.id === tx.id)) {
-      updateTransaction(tx);
-    } else {
-      addTransaction(tx);
-    }
+    setTransactions((prev) => {
+      const exists = prev.find((t) => t.id === tx.id);
+      if (exists) return prev.map((t) => (t.id === tx.id ? tx : t));
+      const newId = Math.max(0, ...prev.map((t) => t.id)) + 1;
+      return [{ ...tx, id: newId }, ...prev];
+    });
     setModalTx(undefined);
   };
 
@@ -154,20 +118,6 @@ export const TransactionsList: React.FC = () => {
     return icons[category] || "💰";
   };
 
-  const handleAddNew = () => {
-    const newTransaction: Transaction = {
-      id: "", // Sarà generato dal context
-      name: "",
-      category: "",
-      description: "",
-      date: new Date().toISOString(),
-      amount: 0,
-      type: "expense",
-      color: "#6366f1",
-    };
-    setModalTx(newTransaction);
-  };
-
   return (
     <div className="relative h-full">
       <div className="h-full bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl border border-slate-700/30 rounded-3xl p-3 sm:p-4 lg:p-6 shadow-2xl">
@@ -181,7 +131,18 @@ export const TransactionsList: React.FC = () => {
             </div>
 
             <button
-              onClick={handleAddNew}
+              onClick={() =>
+                setModalTx({
+                  id: 0,
+                  name: "",
+                  category: "",
+                  description: "",
+                  date: new Date().toISOString(),
+                  amount: 0,
+                  type: "expense",
+                  color: "#6366f1",
+                })
+              }
               className="group relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
             >
               <span className="relative z-10">+</span>
@@ -265,18 +226,9 @@ export const TransactionsList: React.FC = () => {
             <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
-
-        {/* Indicatore se stiamo usando dati di esempio */}
-        {state.transactions.length === 0 && (
-          <div className="absolute top-4 right-4 z-10">
-            <div className="bg-yellow-500/20 text-yellow-200 px-3 py-1 rounded-full text-xs border border-yellow-500/30">
-              Dati di esempio
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* MENU GLOBALE posizionato FIXED */}
+      {/* MENU GLOBALE posizionato FIXED (fuori dalle card, non viene più ritagliato) */}
       {openMenuId != null && menuCoords && (
         <>
           {/* overlay per chiudere */}
@@ -301,8 +253,9 @@ export const TransactionsList: React.FC = () => {
                   e.stopPropagation();
                   const original = transactions.find((t) => t.id === openMenuId);
                   if (original) {
-                    const newTx = { ...original, name: original.name + " (copia)" };
-                    addTransaction(newTx);
+                    const newId = Math.max(0, ...transactions.map((t) => t.id)) + 1;
+                    const newTx = { ...original, id: newId, name: original.name + " (copia)" };
+                    setTransactions((prev) => [newTx, ...prev]);
                   }
                   setOpenMenuId(null);
                   setMenuCoords(null);
@@ -327,8 +280,8 @@ export const TransactionsList: React.FC = () => {
       {/* Modal */}
       {modalTx && (
         <TransactionModal
-          transaction={modalTx.id ? modalTx : undefined}
-          isNew={!modalTx.id}
+          transaction={modalTx}
+          isNew={modalTx.id === 0}
           onClose={() => setModalTx(undefined)}
           onSave={handleSave}
         />

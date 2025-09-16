@@ -1,14 +1,9 @@
 import React from "react";
 import { Wallet, TrendingUp, PiggyBank, Calendar, ArrowUpRight } from "lucide-react";
-import { useFinance } from "../../contexts/FinanceContext";
 
 export const TotalBalanceCard: React.FC = () => {
-  const { getTotalBalance, state } = useFinance();
-  
-  // Calcola il balance totale reale dai dati
-  const balance = getTotalBalance();
-  
-  // Calcola i dati del mese precedente (simulato per ora)
+  // Dati definiti nel componente
+  const balance = 33450.51;
   const percentageChange = 3.2;
   const previousBalance = balance / (1 + percentageChange / 100);
   const monthlyGrowth = balance - previousBalance;
@@ -20,10 +15,6 @@ export const TotalBalanceCard: React.FC = () => {
       currency: 'EUR'
     }).format(amount);
   };
-
-  // Se non ci sono account, mostra dati di esempio
-  const displayBalance = balance > 0 ? balance : 33450.51;
-  const displayGrowth = balance > 0 ? monthlyGrowth : 1089.23;
 
   return (
     <div className="h-full bg-gradient-to-br from-blue-900 via-cyan-800 to-emerald-700 rounded-3xl shadow-2xl p-6 flex flex-col justify-between border border-blue-700/20 hover:shadow-blue-900/20 transition-all duration-300 relative overflow-hidden">
@@ -60,7 +51,7 @@ export const TotalBalanceCard: React.FC = () => {
       <div className="relative z-10 my-6">
         <div className="mb-4">
           <p className="text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight leading-none">
-            {formatCurrency(displayBalance).replace('€', '')}
+            {formatCurrency(balance).replace('€', '')}
             <span className="text-3xl md:text-4xl text-cyan-200 ml-2">€</span>
           </p>
         </div>
@@ -70,7 +61,7 @@ export const TotalBalanceCard: React.FC = () => {
           <div className="flex items-center gap-3">
             <ArrowUpRight className="w-5 h-5 text-green-300" />
             <span className="text-green-300 font-semibold text-lg">
-              +{formatCurrency(displayGrowth)}
+              +{formatCurrency(monthlyGrowth)}
             </span>
             <span className="text-cyan-200 text-sm">
               rispetto al mese scorso
@@ -79,25 +70,25 @@ export const TotalBalanceCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Footer con statistiche dai dati reali */}
+      {/* Footer con statistiche aggiuntive */}
       <div className="grid grid-cols-2 gap-4 relative z-10">
         <div className="bg-black/20 backdrop-blur-sm p-4 rounded-xl border border-white/10">
           <div className="flex items-center gap-2 mb-2">
             <PiggyBank className="w-4 h-4 text-emerald-300" />
-            <span className="text-gray-300 text-sm">Account Attivi</span>
+            <span className="text-gray-300 text-sm">Crescita Mensile</span>
           </div>
           <div className="text-emerald-300 font-bold text-xl">
-            {state.accounts.length}
+            {formatCurrency(monthlyGrowth)}
           </div>
         </div>
 
         <div className="bg-black/20 backdrop-blur-sm p-4 rounded-xl border border-white/10">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-blue-300" />
-            <span className="text-gray-300 text-sm">Investimenti</span>
+            <span className="text-gray-300 text-sm">Mese Precedente</span>
           </div>
           <div className="text-blue-300 font-bold text-xl">
-            {state.investments.length}
+            {formatCurrency(previousBalance)}
           </div>
         </div>
       </div>
@@ -115,15 +106,6 @@ export const TotalBalanceCard: React.FC = () => {
           <span className="text-green-300 font-medium">Raggiunto! 🎉</span>
         </div>
       </div>
-      
-      {/* Indicatore se non ci sono dati reali */}
-      {balance === 0 && (
-        <div className="absolute top-4 right-4 z-20">
-          <div className="bg-yellow-500/20 text-yellow-200 px-3 py-1 rounded-full text-xs border border-yellow-500/30">
-            Dati di esempio
-          </div>
-        </div>
-      )}
     </div>
   );
 };
