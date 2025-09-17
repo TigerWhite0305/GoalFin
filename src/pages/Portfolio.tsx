@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, History, DollarSign, Building, Landmark, X, CheckCircle2, Trash2, MoreVertical } from "lucide-react";
+import { useToast } from "../context/ToastContext";
 
 type Account = {
   id: number;
@@ -19,6 +20,8 @@ const Portfolio: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'1M' | '3M' | '6M' | '1Y'>('6M');
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const { addToast } = useToast();
+
 
   // Stato per i conti
   const [accounts, setAccounts] = useState<Account[]>([
@@ -91,11 +94,18 @@ const Portfolio: React.FC = () => {
     };
     
     setAccounts(prev => [...prev, account]);
+    
+    // TOAST AGGIUNTO
+    addToast(`Conto "${newAccount.name}" aggiunto con successo`, 'success');
   };
 
   const handleDeleteAccount = (accountId: number) => {
+    const account = accounts.find(acc => acc.id === accountId);
     setAccounts(prev => prev.filter(acc => acc.id !== accountId));
     setOpenMenuId(null);
+    
+    // TOAST AGGIUNTO
+    addToast(`Conto "${account?.name}" eliminato con successo`, 'success');
   };
 
   // Storico disponibilità (ultimi 6 mesi)
@@ -440,7 +450,15 @@ const AddAccountModal: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !bank) return;
+    
+    if (!name.trim()) {
+      // Se hai accesso al toast qui, altrimenti passa la validazione al parent
+      return;
+    }
+    
+    if (!bank) {
+      return;
+    }
     
     onSave({
       name,
