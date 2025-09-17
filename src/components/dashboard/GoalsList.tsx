@@ -1,26 +1,17 @@
 import React, { useState } from "react";
-import { Target, Calendar, TrendingUp, CheckCircle, Clock, Euro, Plus } from "lucide-react";
-
-type GoalPriority = "alta" | "media" | "bassa";
-type GoalCategory = "viaggio" | "tecnologia" | "emergenze" | "casa" | "auto" | "altro";
-
-type Goal = {
-  id: string;
-  name: string;
-  current: number;
-  target: number;
-  deadline?: string;
-  priority: GoalPriority;
-  category: GoalCategory;
-  monthlyContribution?: number;
-  description?: string;
-  isCompleted?: boolean;
-};
+import { Target, Calendar, TrendingUp, CheckCircle, Clock, Euro, Plus, Edit, Trash2, DollarSign } from "lucide-react";
+import { useToast } from "../../context/ToastContext";
+import GoalModal, { Goal } from "../transactions/GoalModal";
 
 export const Goals: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState<'tutti' | 'attivi' | 'completati'>('attivi');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | undefined>();
+  
+  // Hook per i toast
+  const { addToast } = useToast();
 
-  const goals: Goal[] = [
+  const [goals, setGoals] = useState<Goal[]>([
     {
       id: "1",
       name: "Vacanza in Giappone",
@@ -43,7 +34,7 @@ export const Goals: React.FC = () => {
       monthlyContribution: 200,
       description: "Upgrade per lavoro freelance"
     }
-  ];
+  ]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
@@ -66,7 +57,7 @@ export const Goals: React.FC = () => {
     return months;
   };
 
-  const getPriorityColor = (priority: GoalPriority) => {
+  const getPriorityColor = (priority: Goal["priority"]) => {
     switch(priority) {
       case 'alta': return 'bg-red-600';
       case 'media': return 'bg-yellow-600'; 
@@ -74,7 +65,7 @@ export const Goals: React.FC = () => {
     }
   };
 
-  const getCategoryIcon = (category: GoalCategory) => {
+  const getCategoryIcon = (category: Goal["category"]) => {
     switch(category) {
       case 'viaggio': return '✈️';
       case 'tecnologia': return '💻';
@@ -93,18 +84,59 @@ export const Goals: React.FC = () => {
     return 'bg-red-500';
   };
 
+  // Funzioni per gestire le azioni con toast
+  const handleAddGoal = () => {
+    setEditingGoal(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    const goal = goals.find(g => g.id === goalId);
+    setGoals(prev => prev.filter(g => g.id !== goalId));
+    addToast(`Obiettivo "${goal?.name}" eliminato con successo`, 'success');
+  };
+
+  const handleSaveGoal = (goal: Goal) => {
+    const exists = goals.find(g => g.id === goal.id);
+    
+    setGoals(prev => {
+      if (exists) {
+        return prev.map(g => g.id === goal.id ? goal : g);
+      } else {
+        return [...prev, goal];
+      }
+    });
+    
+    if (exists) {
+      addToast(`Obiettivo "${goal.name}" aggiornato con successo`, 'success');
+    } else {
+      addToast(`Obiettivo "${goal.name}" creato con successo`, 'success');
+    }
+    
+    setIsModalOpen(false);
+    setEditingGoal(undefined);
+  };
+
+  const handleAddContribution = (goalId: string, amount: number) => {
+    setGoals(prev => prev.map(goal => 
+      goal.id === goalId 
+        ? { ...goal, current: Math.min(goal.current + amount, goal.target) }
+        : goal
+    ));
+    const goal = goals.find(g => g.id === goalId);
+    addToast(`Aggiunto €${amount} a "${goal?.name}"`, 'success');
+  };
+
   const filteredGoals = goals.filter(goal => {
     if (selectedFilter === 'completati') return goal.isCompleted;
     if (selectedFilter === 'attivi') return !goal.isCompleted;
     return true;
   });
-
-  const totalSaved = goals.reduce((sum, goal) => sum + goal.current, 0);
-  const totalTarget = goals.reduce((sum, goal) => sum + goal.target, 0);
-  const completedGoals = goals.filter(goal => goal.isCompleted).length;
-  const totalMonthlyContributions = goals
-    .filter(goal => !goal.isCompleted && goal.monthlyContribution)
-    .reduce((sum, goal) => sum + (goal.monthlyContribution || 0), 0);
 
   return (
     <div className="bg-gray-900 text-white p-3 sm:p-4 lg:p-6 rounded-2xl shadow-2xl h-full">
@@ -115,7 +147,10 @@ export const Goals: React.FC = () => {
           <span className="hidden sm:inline">Obiettivi Finanziari</span>
           <span className="sm:hidden">Obiettivi</span>
         </h2>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-xl text-sm sm:text-base font-medium transition flex items-center gap-2 w-full sm:w-auto justify-center">
+        <button 
+          onClick={handleAddGoal}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-xl text-sm sm:text-base font-medium transition flex items-center gap-2 w-full sm:w-auto justify-center"
+        >
           <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="hidden sm:inline">Nuovo Obiettivo</span>
           <span className="sm:hidden">Nuovo</span>
@@ -124,7 +159,7 @@ export const Goals: React.FC = () => {
 
       {/* Lista obiettivi */}
       <div className="space-y-3 sm:space-y-4">
-        {goals.map((goal) => {
+        {filteredGoals.map((goal) => {
           const percentage = Math.min(100, Math.round((goal.current / goal.target) * 100));
           const remaining = goal.target - goal.current;
           const monthsToDeadline = goal.deadline ? getMonthsToDeadline(goal.deadline) : null;
@@ -135,14 +170,14 @@ export const Goals: React.FC = () => {
           return (
             <div key={goal.id} className={`bg-gray-800 p-4 sm:p-5 rounded-xl border-l-4 ${
               goal.isCompleted ? 'border-green-500' : 'border-blue-500'
-            } hover:bg-gray-750 transition`}>
+            } hover:bg-gray-750 transition group`}>
               
               <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                 
                 {/* Info principale */}
                 <div className="flex-1">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-2">
-                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap flex-1">
                       <span className="text-xl sm:text-2xl">{getCategoryIcon(goal.category)}</span>
                       <h3 className="text-lg sm:text-xl font-semibold">{goal.name}</h3>
                     </div>
@@ -159,6 +194,31 @@ export const Goals: React.FC = () => {
                           <span className="sm:hidden">✓</span>
                         </span>
                       )}
+
+                      {/* Menu azioni */}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleEditGoal(goal)}
+                          className="p-2 text-gray-400 hover:text-blue-400 transition-colors rounded-lg"
+                          title="Modifica"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGoal(goal.id)}
+                          className="p-2 text-gray-400 hover:text-red-400 transition-colors rounded-lg"
+                          title="Elimina"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleAddContribution(goal.id, 100)}
+                          className="p-2 text-gray-400 hover:text-green-400 transition-colors rounded-lg"
+                          title="Aggiungi €100"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -243,6 +303,19 @@ export const Goals: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <GoalModal
+          goal={editingGoal}
+          isNew={!editingGoal}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingGoal(undefined);
+          }}
+          onSave={handleSaveGoal}
+        />
+      )}
     </div>
   );
 };
