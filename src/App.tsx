@@ -4,7 +4,7 @@ import Statistics from "./pages/Statistics";
 import Transactions from "./pages/Transactions";
 import Portfolio from "./pages/Portfolio";
 import {InvestmentsPage} from "./pages/InvestmentsPage";
-import Navbar from "./components/Navbar";
+import Navbar from "./components/layout/Navbar";
 
 function App() {
   return (

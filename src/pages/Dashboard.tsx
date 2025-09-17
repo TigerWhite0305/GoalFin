@@ -1,12 +1,12 @@
 import React from "react";
-import { TotalBalanceCard } from "../components/components_dashboard/TotalBalanceCard";
-import { IncomeCard } from "../components/components_dashboard/IncomeCard";
-import { ExpensesCard } from "../components/components_dashboard/ExpensesCard";
-import { RevenueChart } from "../components/components_dashboard/RevenueChart";
-import { ExpensesPieChart } from "../components/components_dashboard/ExpensesPieChart";
-import { TransactionsList } from "../components/components_dashboard/TransactionsList";
-import { Goals } from "../components/components_dashboard/GoalsList";
-import Investments from "../components/components_dashboard/Investments";
+import { TotalBalanceCard } from "../components/dashboard/TotalBalanceCard";
+import { IncomeCard } from "../components/dashboard/IncomeCard";
+import { ExpensesCard } from "../components/dashboard/ExpensesCard";
+import { RevenueChart } from "../components/dashboard/RevenueChart";
+import { ExpensesPieChart } from "../components/dashboard/ExpensesPieChart";
+import { TransactionsList } from "../components/dashboard/TransactionsList";
+import { Goals } from "../components/dashboard/GoalsList";
+import Investments from "../components/dashboard/Investments";
 
 const Dashboard: React.FC = () => {
   return (
