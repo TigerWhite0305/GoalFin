@@ -1,30 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { X, Plus, Calendar, DollarSign, Type, FileText, Repeat, Clock, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { X, CheckCircle2, DollarSign, Type, FileText, Clock, Plus, Calendar, Repeat } from "lucide-react";
+import { Transaction } from '../../pages/Transactions';
 
-// Type definitions
-export type Transaction = {
-  id: number;
-  name: string;
-  category: string;
-  description: string;
-  date: string;
-  amount: number;
-  type: "income" | "expense";
-  color?: string;
-};
-
-export type TransactionModalProps = {
+interface TransactionModalProps {
   transaction?: Transaction;
+  isNew: boolean;
   onClose: () => void;
   onSave: (tx: Transaction) => void;
-  isNew?: boolean;
-};
+}
 
-export const TransactionModal: React.FC<TransactionModalProps> = ({
-  transaction,
-  onClose,
-  onSave,
-  isNew = false,
+const TransactionModal: React.FC<TransactionModalProps> = ({ 
+  transaction, 
+  isNew, 
+  onClose, 
+  onSave 
 }) => {
   const [name, setName] = useState(transaction?.name ?? "");
   const [category, setCategory] = useState(transaction?.category ?? "");
@@ -33,21 +22,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [amount, setAmount] = useState(transaction?.amount ?? 0);
   const [type, setType] = useState<Transaction["type"]>(transaction?.type ?? "expense");
   const [selectedColor, setSelectedColor] = useState(transaction?.color ?? "#6366f1");
+  const [isRecurring, setIsRecurring] = useState(transaction?.isRecurring ?? false);
+  const [frequency, setFrequency] = useState(transaction?.recurringInfo?.frequency ?? 1);
+  const [duration, setDuration] = useState<string>(transaction?.recurringInfo?.duration ?? "1");
 
-  // Stati per la transazione ricorrente
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [frequency, setFrequency] = useState(1);
-  const [duration, setDuration] = useState<string>("1");
-
-  // Blocca lo scroll della pagina quando il modal è aperto
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
-
-  // Categorie predefinite con icone e colori
   const categoryOptions = {
     expense: [
       { name: "Casa", icon: "🏠", color: "#4C6FFF" },
@@ -70,19 +48,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   useEffect(() => {
-    setName(transaction?.name ?? "");
-    setCategory(transaction?.category ?? "");
-    setDescription(transaction?.description ?? "");
-    setDate(transaction?.date ?? new Date().toISOString().slice(0, 16));
-    setAmount(transaction?.amount ?? 0);
-    setType(transaction?.type ?? "expense");
-    setSelectedColor(transaction?.color ?? "#6366f1");
-  }, [transaction]);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const newTx: Transaction & { recurring?: { frequency: number; duration: string } } = {
+    
+    if (!name.trim()) {
+      return;
+    }
+    
+    const newTx: Transaction = {
       id: isNew ? Date.now() : transaction!.id,
       name,
       category,
@@ -91,11 +70,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       amount,
       type,
       color: selectedColor,
-      recurring: isRecurring ? { frequency, duration } : undefined,
+      isRecurring,
+      recurringInfo: isRecurring ? { frequency, duration } : undefined,
     };
 
     onSave(newTx);
-    onClose();
   };
 
   const handleCategorySelect = (cat: any) => {
@@ -104,7 +83,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const currentCategories = categoryOptions[type];
-  const selectedCategoryData = currentCategories.find(cat => cat.name === category);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -133,7 +111,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
           
           {/* Type Toggle */}
           <div className="flex flex-col gap-3">
@@ -311,9 +289,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             </div>
           )}
+        </div>
 
-          {/* Buttons */}
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-700/50 flex-shrink-0">
+        {/* Footer */}
+        <div className="p-4 sm:p-6 border-t border-slate-700/50 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
             <button
               type="button"
               className="px-6 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-slate-300 font-semibold hover:bg-slate-600/50 hover:text-white transition-all"
@@ -323,7 +303,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center"
               onClick={handleSubmit}
             >
               <CheckCircle2 className="w-5 h-5" />
