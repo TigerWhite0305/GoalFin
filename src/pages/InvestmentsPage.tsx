@@ -1,40 +1,18 @@
 import React, { useState } from "react";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { TrendingUp, TrendingDown, Calendar, DollarSign, Target, Plus, Filter, MoreVertical, Trash2, Eye, EyeOff, BarChart3, X } from "lucide-react";
-
-type InvestmentType = "PAC_ETF" | "ETF_SINGOLO" | "AZIONE";
-
-type Investment = {
-  id: string;
-  name: string;
-  type: InvestmentType;
-  monthlyAmount?: number;
-  startDate?: string;
-  totalMonths?: number;
-  totalInvested: number;
-  currentValue: number;
-  shares?: number;
-  avgBuyPrice?: number;
-  currentPrice?: number;
-  ytdReturn?: number;
-  totalReturn: number;
-  isin?: string;
-  sector?: string;
-  ticker?: string;
-};
+import { TrendingUp, TrendingDown, Calendar, DollarSign, Target, Plus, Filter, MoreVertical, Trash2, Eye, EyeOff, BarChart3, Edit } from "lucide-react";
+import { useToast } from "../context/ToastContext";
+import InvestmentModal, { Investment } from "../components/transactions/InvestmentModal";
 
 export const InvestmentsPage: React.FC = () => {
   const [selectedView, setSelectedView] = useState<'overview' | 'details'>('overview');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'PAC_ETF' | 'ETF_SINGOLO' | 'AZIONE'>('all');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showValues, setShowValues] = useState(true);
-  const [isNewInvestmentModalOpen, setIsNewInvestmentModalOpen] = useState(false);
-  const [newInvestment, setNewInvestment] = useState<Partial<Investment>>({
-    type: 'PAC_ETF',
-    totalInvested: 0,
-    currentValue: 0,
-    totalReturn: 0
-  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>();
+  
+  const { addToast } = useToast();
 
   const [investments, setInvestments] = useState<Investment[]>([
     {
@@ -145,53 +123,47 @@ export const InvestmentsPage: React.FC = () => {
     { month: 'Set', value: 15305 },
   ];
 
-  const handleDeleteInvestment = (id: string) => {
-    setInvestments(prev => prev.filter(inv => inv.id !== id));
+  // Handler functions
+  const handleAddInvestment = () => {
+    setEditingInvestment(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleEditInvestment = (investment: Investment) => {
+    setEditingInvestment(investment);
+    setIsModalOpen(true);
     setOpenMenuId(null);
   };
 
-  const handleAddInvestment = () => {
-    if (!newInvestment.name || !newInvestment.totalInvested) return;
-    
-    const investment: Investment = {
-      id: Date.now().toString(),
-      name: newInvestment.name,
-      type: newInvestment.type as InvestmentType,
-      monthlyAmount: newInvestment.monthlyAmount,
-      startDate: newInvestment.startDate,
-      totalMonths: newInvestment.totalMonths,
-      totalInvested: newInvestment.totalInvested,
-      currentValue: newInvestment.currentValue || newInvestment.totalInvested,
-      shares: newInvestment.shares,
-      avgBuyPrice: newInvestment.avgBuyPrice,
-      currentPrice: newInvestment.currentPrice,
-      ytdReturn: newInvestment.ytdReturn,
-      totalReturn: newInvestment.totalReturn || 0,
-      isin: newInvestment.isin,
-      sector: newInvestment.sector,
-      ticker: newInvestment.ticker,
-    };
-    
-    setInvestments(prev => [...prev, investment]);
-    setIsNewInvestmentModalOpen(false);
-    setNewInvestment({
-      type: 'PAC_ETF',
-      totalInvested: 0,
-      currentValue: 0,
-      totalReturn: 0
-    });
+  const handleDeleteInvestment = (id: string) => {
+    const investment = investments.find(inv => inv.id === id);
+    setInvestments(prev => prev.filter(inv => inv.id !== id));
+    setOpenMenuId(null);
+    addToast(`"${investment?.name}" eliminato con successo`, 'success');
   };
 
-  const resetNewInvestmentForm = () => {
-    setNewInvestment({
-      type: 'PAC_ETF',
-      totalInvested: 0,
-      currentValue: 0,
-      totalReturn: 0
+  const handleSaveInvestment = (investment: Investment) => {
+    const exists = investments.find(inv => inv.id === investment.id);
+    
+    setInvestments(prev => {
+      if (exists) {
+        return prev.map(inv => inv.id === investment.id ? investment : inv);
+      } else {
+        return [...prev, investment];
+      }
     });
-    setIsNewInvestmentModalOpen(false);
+    
+    if (exists) {
+      addToast(`"${investment.name}" aggiornato con successo`, 'success');
+    } else {
+      addToast(`"${investment.name}" aggiunto con successo`, 'success');
+    }
+    
+    setIsModalOpen(false);
+    setEditingInvestment(undefined);
   };
 
+  // Computed values
   const filteredInvestments = selectedFilter === 'all' 
     ? investments 
     : investments.filter(inv => inv.type === selectedFilter);
@@ -205,6 +177,7 @@ export const InvestmentsPage: React.FC = () => {
     .filter(inv => inv.type === "PAC_ETF")
     .reduce((sum, inv) => sum + (inv.monthlyAmount || 0), 0);
 
+  // Utility functions
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
@@ -217,7 +190,7 @@ export const InvestmentsPage: React.FC = () => {
     return `${sign}${value.toFixed(2)}%`;
   };
 
-  const getTypeLabel = (type: InvestmentType) => {
+  const getTypeLabel = (type: Investment["type"]) => {
     switch(type) {
       case 'PAC_ETF': return 'PAC ETF';
       case 'ETF_SINGOLO': return 'ETF';
@@ -225,7 +198,7 @@ export const InvestmentsPage: React.FC = () => {
     }
   };
 
-  const getTypeColor = (type: InvestmentType) => {
+  const getTypeColor = (type: Investment["type"]) => {
     switch(type) {
       case 'PAC_ETF': return 'bg-blue-600';
       case 'ETF_SINGOLO': return 'bg-purple-600';
@@ -233,7 +206,7 @@ export const InvestmentsPage: React.FC = () => {
     }
   };
 
-  // Dati per il grafico a torta
+  // Chart data
   const pieData = filteredInvestments.map(inv => ({
     name: inv.name.split(' - ')[0] || inv.name,
     value: inv.currentValue,
@@ -276,7 +249,7 @@ export const InvestmentsPage: React.FC = () => {
             {showValues ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
           </button>
           <button 
-            onClick={() => setIsNewInvestmentModalOpen(true)}
+            onClick={handleAddInvestment}
             className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 px-4 py-2 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl text-sm sm:text-base"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -491,6 +464,13 @@ export const InvestmentsPage: React.FC = () => {
                           <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
                           <div className="absolute top-8 right-0 z-50 w-40 bg-gray-700 border border-gray-600 rounded-lg shadow-xl">
                             <button
+                              onClick={() => handleEditInvestment(investment)}
+                              className="w-full px-4 py-2 text-left text-blue-400 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Modifica
+                            </button>
+                            <button
                               onClick={() => handleDeleteInvestment(investment.id)}
                               className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-2"
                             >
@@ -567,230 +547,18 @@ export const InvestmentsPage: React.FC = () => {
         })}
       </div>
 
-      {/* Modal Nuovo Investimento */}
-      {isNewInvestmentModalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-700">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">Nuovo Investimento</h2>
-              <button
-                onClick={resetNewInvestmentForm}
-                className="p-2 text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Nome */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Nome *</label>
-                <input
-                  type="text"
-                  value={newInvestment.name || ''}
-                  onChange={(e) => setNewInvestment(prev => ({...prev, name: e.target.value}))}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="es. VWCE - Vanguard FTSE All-World"
-                />
-              </div>
-
-              {/* Tipo */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Tipo di Investimento *</label>
-                <select
-                  value={newInvestment.type}
-                  onChange={(e) => setNewInvestment(prev => ({...prev, type: e.target.value as InvestmentType}))}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="PAC_ETF">PAC ETF</option>
-                  <option value="ETF_SINGOLO">ETF</option>
-                  <option value="AZIONE">Azione</option>
-                </select>
-              </div>
-
-              {/* Ticker e ISIN */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Ticker</label>
-                  <input
-                    type="text"
-                    value={newInvestment.ticker || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, ticker: e.target.value}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="es. VWCE"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">ISIN</label>
-                  <input
-                    type="text"
-                    value={newInvestment.isin || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, isin: e.target.value}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="es. IE00BK5BQT80"
-                  />
-                </div>
-              </div>
-
-              {/* Campi per PAC ETF */}
-              {newInvestment.type === 'PAC_ETF' && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Importo Mensile (€)</label>
-                      <input
-                        type="number"
-                        value={newInvestment.monthlyAmount || ''}
-                        onChange={(e) => setNewInvestment(prev => ({...prev, monthlyAmount: parseFloat(e.target.value) || 0}))}
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="300"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Data Inizio</label>
-                      <input
-                        type="date"
-                        value={newInvestment.startDate || ''}
-                        onChange={(e) => setNewInvestment(prev => ({...prev, startDate: e.target.value}))}
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Mesi Totali</label>
-                    <input
-                      type="number"
-                      value={newInvestment.totalMonths || ''}
-                      onChange={(e) => setNewInvestment(prev => ({...prev, totalMonths: parseInt(e.target.value) || 0}))}
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="12"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Settore per azioni */}
-              {newInvestment.type === 'AZIONE' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Settore</label>
-                  <input
-                    type="text"
-                    value={newInvestment.sector || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, sector: e.target.value}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="es. Technology"
-                  />
-                </div>
-              )}
-
-              {/* Importi */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Totale Investito (€) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newInvestment.totalInvested || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, totalInvested: parseFloat(e.target.value) || 0}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="1000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Valore Attuale (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newInvestment.currentValue || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, currentValue: parseFloat(e.target.value) || 0}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="1100"
-                  />
-                </div>
-              </div>
-
-              {/* Quote e prezzi */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Quantità</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newInvestment.shares || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, shares: parseFloat(e.target.value) || 0}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="12.5"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Prezzo Medio (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newInvestment.avgBuyPrice || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, avgBuyPrice: parseFloat(e.target.value) || 0}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="80"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Prezzo Attuale (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newInvestment.currentPrice || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, currentPrice: parseFloat(e.target.value) || 0}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="88"
-                  />
-                </div>
-              </div>
-
-              {/* Rendimenti */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Rendimento YTD (%)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newInvestment.ytdReturn || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, ytdReturn: parseFloat(e.target.value) || 0}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="8.5"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Rendimento Totale (%)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newInvestment.totalReturn || ''}
-                    onChange={(e) => setNewInvestment(prev => ({...prev, totalReturn: parseFloat(e.target.value) || 0}))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="10"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Pulsanti */}
-            <div className="flex gap-3 mt-8">
-              <button
-                onClick={resetNewInvestmentForm}
-                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleAddInvestment}
-                disabled={!newInvestment.name || !newInvestment.totalInvested}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
-              >
-                Aggiungi Investimento
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Modal */}
+      {isModalOpen && (
+        <InvestmentModal
+          investment={editingInvestment}
+          isNew={!editingInvestment}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingInvestment(undefined);
+          }}
+          onSave={handleSaveInvestment}
+        />
       )}
     </div>
-);}
+  );
+};
