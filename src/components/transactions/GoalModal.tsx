@@ -84,8 +84,11 @@ const GoalModal: React.FC<GoalModalProps> = ({
     onSave(newGoal);
   };
 
+  
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-slate-700/50 rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
         
         {/* Header */}
