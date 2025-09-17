@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Filter, Plus, Calendar, TrendingUp, TrendingDown, Repeat, X, CheckCircle2, DollarSign, Type, FileText, Clock } from "lucide-react";
+import { useToast } from "../context/ToastContext";
+
 
 // Types
 export type Transaction = {
@@ -29,6 +31,9 @@ const TransactionsPage: React.FC = () => {
   const [modalTransaction, setModalTransaction] = useState<Transaction | undefined>();
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
+
+  // Hook per i toast
+  const { addToast } = useToast();
 
   const buttonRefs = useRef<Map<number, HTMLButtonElement | null>>(new Map());
 
@@ -137,21 +142,34 @@ const TransactionsPage: React.FC = () => {
     setMenuCoords(null);
   };
 
+  // Funzione delete aggiornata con toast
   const handleDelete = (id: number) => {
+    const transactionName = transactions.find(tx => tx.id === id)?.name || 'Transazione';
     setTransactions(prev => prev.filter(tx => tx.id !== id));
     setOpenMenuId(null);
     setMenuCoords(null);
+    addToast(`"${transactionName}" eliminata con successo`, 'success');
   };
 
+  // Funzione save aggiornata con toast
   const handleSave = (tx: Transaction) => {
+    const exists = transactions.find(t => t.id === tx.id);
+    
     setTransactions(prev => {
-      const exists = prev.find(t => t.id === tx.id);
       if (exists) {
         return prev.map(t => t.id === tx.id ? tx : t);
       } else {
         return [{ ...tx, id: Date.now() }, ...prev];
       }
     });
+    
+    // Toast fuori dal setter
+    if (exists) {
+      addToast(`"${tx.name}" aggiornata con successo`, 'success');
+    } else {
+      addToast(`"${tx.name}" creata con successo`, 'success');
+    }
+    
     setIsModalOpen(false);
     setModalTransaction(undefined);
   };
@@ -424,6 +442,7 @@ const TransactionsPage: React.FC = () => {
               <span className="text-blue-400">✏️</span>
               Modifica
             </button>
+            {/* Bottone Duplica aggiornato con toast */}
             <button
               onClick={() => {
                 const tx = transactions.find(t => t.id === openMenuId);
@@ -435,6 +454,7 @@ const TransactionsPage: React.FC = () => {
                     date: new Date().toISOString()
                   };
                   setTransactions(prev => [newTx, ...prev]);
+                  addToast(`"${tx.name}" duplicata con successo`, 'success');
                 }
                 setOpenMenuId(null);
                 setMenuCoords(null);
@@ -473,7 +493,7 @@ const TransactionsPage: React.FC = () => {
   );
 };
 
-// Modal Component
+// Modal Component rimane uguale
 const TransactionModal: React.FC<{
   transaction?: Transaction;
   isNew: boolean;
@@ -522,6 +542,10 @@ const TransactionModal: React.FC<{
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!name.trim()) {
+      return;
+    }
+    
     const newTx: Transaction = {
       id: isNew ? Date.now() : transaction!.id,
       name,
@@ -535,7 +559,7 @@ const TransactionModal: React.FC<{
       recurringInfo: isRecurring ? { frequency, duration } : undefined,
     };
 
-    onSave(newTx);
+    onSave(newTx); // Solo questo, il toast è già in handleSave
   };
 
   const handleCategorySelect = (cat: any) => {

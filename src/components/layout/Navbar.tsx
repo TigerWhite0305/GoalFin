@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Settings, User, Moon, Sun, Search, ChevronDown, LogOut, CreditCard, Wallet } from "lucide-react";
+import { Bell, Settings, User, Moon, Sun, Search, ChevronDown, LogOut, Wallet } from "lucide-react";
+import { useGlobalSearch } from "../../hooks/useGlobalSearch";
+import { useTheme } from "../../context/ThemeContext";
 
 const navItems = [
   { name: "Dashboard", path: "/" },
@@ -16,10 +18,21 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [activeItem, setActiveItem] = useState("Dashboard");
   const [isOpen, setIsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+
+  // Hook per il tema
+  const { toggleTheme, isDarkMode } = useTheme();
+
+  // Hook per la ricerca globale
+  const { 
+    searchTerm, 
+    setSearchTerm, 
+    isOpen: showSearch, 
+    setIsOpen: setShowSearch, 
+    searchResults, 
+    hasResults 
+  } = useGlobalSearch();
 
   // Aggiorna activeItem in base al path corrente
   useEffect(() => {
@@ -32,7 +45,13 @@ const Navbar: React.FC = () => {
   const handleNavigation = (item: { name: string; path: string }) => {
     setActiveItem(item.name);
     navigate(item.path);
-    setIsOpen(false); // Chiude il menu mobile
+    setIsOpen(false);
+  };
+
+  const handleSearchResultClick = (result: any) => {
+    navigate(result.url);
+    setShowSearch(false);
+    setSearchTerm('');
   };
 
   const notifications = [
@@ -42,9 +61,9 @@ const Navbar: React.FC = () => {
   ];
 
   return (
-    <header className="w-full backdrop-blur-md bg-gray-900/80 border-b border-gray-800 relative z-50">
+    <header className="w-full backdrop-blur-md bg-gray-900/80 dark:bg-gray-900/80 border-b border-gray-800 dark:border-gray-800 relative z-50">
       <div className="mx-auto px-6 py-4 flex items-center justify-between">
-        {/* Logo - cliccabile per tornare alla dashboard */}
+        {/* Logo */}
         <button 
           onClick={() => handleNavigation({ name: "Dashboard", path: "/" })}
           className="flex items-center gap-3 hover:scale-105 transition-transform"
@@ -52,12 +71,12 @@ const Navbar: React.FC = () => {
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
             <Wallet className="w-7 h-7 text-white" />
           </div>
-          <span className="text-white font-bold text-xl hidden sm:block">FinanceDash</span>
+          <span className="text-white font-bold text-xl hidden sm:block">GoalFin</span>
         </button>
 
         {/* Menu Desktop */}
         <div className="hidden lg:flex flex-1 justify-center">
-          <nav className="relative flex space-x-6 bg-white/10 rounded-full px-6 py-4 backdrop-blur-sm border border-white/20">
+          <nav className="relative flex space-x-6 bg-white/10 dark:bg-white/10 rounded-full px-6 py-4 backdrop-blur-sm border border-white/20">
             {navItems.map((item) => {
               const isActive = activeItem === item.name;
               return (
@@ -69,7 +88,7 @@ const Navbar: React.FC = () => {
                   {isActive && (
                     <motion.div
                       layoutId="active-pill"
-                      className="absolute inset-0 bg-white rounded-full shadow-lg"
+                      className="absolute inset-0 bg-white dark:bg-white rounded-full shadow-lg"
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
                   )}
@@ -89,7 +108,7 @@ const Navbar: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className="w-12 h-12 bg-gray-800/60 hover:bg-gray-700/60 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition-all backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50"
+              className="w-12 h-12 bg-gray-800/60 hover:bg-gray-700/60 dark:bg-gray-800/60 dark:hover:bg-gray-700/60 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition-all backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50"
             >
               <Search className="w-5 h-5" />
             </button>
@@ -100,23 +119,81 @@ const Navbar: React.FC = () => {
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute right-0 top-14 w-80 bg-gray-800/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-700/50 p-4 z-[9999]"
+                  className="absolute right-0 top-14 w-96 bg-gray-800/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-700/50 p-4 z-[9999]"
                 >
                   <input
                     type="text"
-                    placeholder="Cerca transazioni, investimenti..."
-                    className="w-full bg-gray-700/50 text-white placeholder-gray-400 rounded-xl px-4 py-3 border border-gray-600/50 focus:border-blue-500/50 focus:outline-none"
+                    placeholder="Cerca transazioni, portfolio, obiettivi..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-gray-700/50 dark:bg-gray-700/50 text-white placeholder-gray-400 rounded-xl px-4 py-3 border border-gray-600/50 focus:border-blue-500/50 focus:outline-none"
+                    autoFocus
                   />
-                  <div className="mt-3 space-y-2">
-                    <div className="text-gray-400 text-sm font-medium">Ricerche recenti</div>
-                    <div className="space-y-1">
-                      {["Tesla TSLA", "PAC Settembre", "Spese alimentari"].map((search) => (
-                        <button key={search} className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors text-sm">
-                          {search}
-                        </button>
-                      ))}
+                  
+                  {/* Risultati di ricerca */}
+                  {searchTerm && (
+                    <div className="mt-3 max-h-80 overflow-y-auto">
+                      {hasResults ? (
+                        <>
+                          <div className="text-gray-400 text-sm font-medium mb-3">
+                            {searchResults.length} risultat{searchResults.length === 1 ? 'o' : 'i'}
+                          </div>
+                          <div className="space-y-2">
+                            {searchResults.map((result) => (
+                              <button
+                                key={result.id}
+                                onClick={() => handleSearchResultClick(result)}
+                                className="w-full text-left px-3 py-3 hover:bg-gray-700/50 rounded-lg transition-colors group"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-2xl">{result.icon}</span>
+                                  <div className="flex-1">
+                                    <div className="text-white font-medium group-hover:text-blue-300 transition-colors">
+                                      {result.title}
+                                    </div>
+                                    <div className="text-gray-400 text-sm">
+                                      {result.subtitle}
+                                    </div>
+                                  </div>
+                                  {result.amount && (
+                                    <div className="text-right">
+                                      <div className="text-white font-medium">
+                                        €{result.amount.toLocaleString()}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400">
+                          <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p>Nessun risultato trovato</p>
+                          <p className="text-sm">Prova con termini diversi</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
+                  
+                  {/* Ricerche recenti */}
+                  {!searchTerm && (
+                    <div className="mt-3">
+                      <div className="text-gray-400 text-sm font-medium mb-3">Ricerche recenti</div>
+                      <div className="space-y-1">
+                        {["Stipendio", "Affitto", "Netflix", "Vacanza Giappone"].map((search) => (
+                          <button 
+                            key={search} 
+                            onClick={() => setSearchTerm(search)}
+                            className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors text-sm"
+                          >
+                            {search}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -146,7 +223,14 @@ const Navbar: React.FC = () => {
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-white font-semibold text-lg">Notifiche</h3>
-                    <button className="text-blue-400 text-sm hover:text-blue-300">Segna tutte come lette</button>
+                    <button 
+                      onClick={() => {
+                        console.log('Mark all as read - funzionalità da implementare');
+                      }}
+                      className="text-blue-400 text-sm hover:text-blue-300"
+                    >
+                      Segna tutte come lette
+                    </button>
                   </div>
                   
                   <div className="space-y-3 max-h-80 overflow-y-auto">
@@ -182,9 +266,9 @@ const Navbar: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          {/* Dark Mode Toggle */}
+          {/* Dark Mode Toggle - ORA FUNZIONANTE */}
           <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={toggleTheme}
             className="w-12 h-12 bg-gray-800/60 hover:bg-gray-700/60 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition-all backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50"
           >
             {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -221,18 +305,27 @@ const Navbar: React.FC = () => {
                   </div>
                   
                   <div className="space-y-1">
-                    <button className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => console.log('Navigate to profile')}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                    >
                       <User className="w-4 h-4" />
                       <span>Il mio profilo</span>
                     </button>
-                    <button className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => console.log('Navigate to settings')}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                    >
                       <Settings className="w-4 h-4" />
                       <span>Impostazioni</span>
                     </button>
                   </div>
                   
                   <div className="mt-4 pt-3 border-t border-gray-700/50">
-                    <button className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => console.log('Logout - funzionalità da implementare')}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                    >
                       <LogOut className="w-4 h-4" />
                       <span>Logout</span>
                     </button>
