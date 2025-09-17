@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import  TransactionModal  from "../transactions/TransactionModal";
+import  TransactionModal  from "../ui/TransactionModal";
 
 // Definizione del tipo Transaction per TypeScript
 export type Transaction = {

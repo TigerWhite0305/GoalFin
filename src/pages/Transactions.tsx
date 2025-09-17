@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Filter, Plus, Calendar, TrendingUp, TrendingDown, Repeat, X, CheckCircle2, DollarSign, Type, FileText, Clock } from "lucide-react";
 import { useToast } from "../context/ToastContext";
-import TransactionModal from '../components/transactions/TransactionModal';
+import TransactionModal from '../components/ui/TransactionModal';
 
 // Types
 export type Transaction = {

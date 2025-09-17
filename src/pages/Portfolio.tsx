@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, History, DollarSign, Building, Landmark, MoreVertical, Edit, Trash2, ArrowLeftRight } from "lucide-react";
 import { useToast } from "../context/ToastContext";
-import AccountModal, { Account } from "../components/transactions/AccountModal";
-import TransferModal from "../components/transactions/TransferModal";
-import BalanceAdjustModal from "../components/transactions/BalanceAdjustModal";
+import AccountModal, { Account } from "../components/ui/AccountModal";
+import TransferModal from "../components/ui/TransferModal";
+import BalanceAdjustModal from "../components/ui/BalanceAdjustModal";
 
 const Portfolio: React.FC = () => {
   const [showBalance, setShowBalance] = useState(true);

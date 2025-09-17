@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Target, Calendar, TrendingUp, CheckCircle, Clock, Euro, Plus, Edit, Trash2, DollarSign, Maximize2, X, Filter } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
-import GoalModal, { Goal } from "../transactions/GoalModal";
+import GoalModal, { Goal } from "../ui/GoalModal";
 
 interface GoalsProps {
   dashboardMode?: boolean;

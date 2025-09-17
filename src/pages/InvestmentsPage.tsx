@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { TrendingUp, TrendingDown, Calendar, DollarSign, Target, Plus, Filter, MoreVertical, Trash2, Eye, EyeOff, BarChart3, Edit } from "lucide-react";
 import { useToast } from "../context/ToastContext";
-import InvestmentModal, { Investment } from "../components/transactions/InvestmentModal";
+import InvestmentModal, { Investment } from "../components/ui/InvestmentModal";
 
 export const InvestmentsPage: React.FC = () => {
   const [selectedView, setSelectedView] = useState<'overview' | 'details'>('overview');
