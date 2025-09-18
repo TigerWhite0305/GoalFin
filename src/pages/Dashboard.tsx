@@ -7,51 +7,77 @@ import { ExpensesPieChart } from "../components/dashboard/ExpensesPieChart";
 import { TransactionsList } from "../components/dashboard/TransactionsList";
 import { Goals } from "../components/dashboard/GoalsList";
 import Investments from "../components/dashboard/Investments";
+import { useTheme } from "../context/ThemeContext";
 
 const Dashboard: React.FC = () => {
+  const { isDarkMode } = useTheme();
+
   return (
-    <div className="grid gap-5 text-white p-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-6 auto-rows-[minmax(200px,auto)]">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'} transition-colors duration-300`}>
+      {/* Container principale con padding responsive */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
 
-      {/* TotalBalanceCard - Grande card principale */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-3 lg:row-span-2 h-full rounded-3xl">
-        <TotalBalanceCard />
+        {/* Griglia principale redesignata */}
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-6 auto-rows-[minmax(200px,auto)]">
+
+          {/* TotalBalanceCard - Card principale */}
+          <div className="col-span-1 md:col-span-2 lg:col-span-3 lg:row-span-2 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full`}>
+              <TotalBalanceCard />
+            </div>
+          </div>
+
+          {/* IncomeCard - In alto a destra */}
+          <div className="col-span-1 lg:col-start-4 lg:row-start-1 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full`}>
+              <IncomeCard />
+            </div>
+          </div>
+
+          {/* ExpensesCard - Sotto IncomeCard */}
+          <div className="col-span-1 lg:col-start-4 lg:row-start-2 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full`}>
+              <ExpensesCard />
+            </div>
+          </div>
+
+          {/* Goals - Sezione obiettivi */}
+          <div className="col-span-1 lg:col-start-5 lg:row-start-1 lg:col-span-2 lg:row-span-2 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full overflow-hidden`}>
+              <Goals />
+            </div>
+          </div>
+
+          {/* RevenueChart - Grafico entrate */}
+          <div className="col-span-1 lg:col-start-1 lg:row-start-3 lg:col-span-2 lg:row-span-3 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full overflow-hidden`}>
+              <RevenueChart />
+            </div>
+          </div>
+
+          {/* ExpensesPieChart - Grafico spese */}
+          <div className="col-span-1 lg:col-start-3 lg:row-start-3 lg:col-span-2 lg:row-span-3 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full overflow-hidden`}>
+              <ExpensesPieChart />
+            </div>
+          </div>
+
+          {/* TransactionsList - Lista transazioni */}
+          <div className="col-span-1 lg:col-start-5 lg:row-start-3 lg:col-span-2 lg:row-span-3 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full overflow-hidden`}>
+              <TransactionsList />
+            </div>
+          </div>
+
+          {/* Investments - Sezione investimenti full width */}
+          <div className="col-span-1 md:col-span-2 lg:col-start-1 lg:row-start-6 lg:col-span-6 lg:row-span-1 h-full">
+            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full overflow-hidden`}>
+              <Investments />
+            </div>
+          </div>
+
+        </div>
       </div>
-
-      {/* IncomeCard - In alto a destra */}
-      <div className="col-span-1 lg:col-start-4 lg:row-start-1 h-full rounded-3xl">
-        <IncomeCard />
-      </div>
-
-      {/* ExpensesCard - Sotto IncomeCard */}
-      <div className="col-span-1 lg:col-start-4 lg:row-start-2 h-full rounded-3xl">
-        <ExpensesCard />
-      </div>
-
-      {/* Goals - Ridotta a 2 righe invece di 3 */}
-      <div className="col-span-1 lg:col-start-5 lg:row-start-1 lg:col-span-2 lg:row-span-2 rounded-3xl h-full">
-        <Goals />
-      </div>
-
-      {/* RevenueChart - Grafico lineare */}
-      <div className="col-span-1 lg:col-start-1 lg:row-start-3 lg:col-span-2 lg:row-span-3 h-full rounded-3xl">
-        <RevenueChart />
-      </div>
-
-      {/* ExpensesPieChart - Grafico a torta */}
-      <div className="col-span-1 lg:col-start-3 lg:row-start-3 lg:col-span-2 lg:row-span-3 h-full rounded-3xl">
-        <ExpensesPieChart />
-      </div>
-
-      {/* TransactionsList - Lista transazioni, più spazio verticale */}
-      <div className="col-span-1 lg:col-start-5 lg:row-start-3 lg:col-span-2 lg:row-span-3 h-full rounded-3xl">
-        <TransactionsList />
-      </div>
-
-      {/* Investments - In fondo, full width */}
-      <div className="col-span-1 md:col-span-2 lg:col-start-1 lg:row-start-6 lg:col-span-6 lg:row-span-1 rounded-3xl h-full">
-        <Investments />
-      </div>
-
     </div>
   );
 };

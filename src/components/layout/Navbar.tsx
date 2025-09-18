@@ -61,38 +61,39 @@ const Navbar: React.FC = () => {
   ];
 
   return (
-    <header className="w-full backdrop-blur-md bg-gray-900/80 dark:bg-gray-900/80 border-b border-gray-800 dark:border-gray-800 relative z-50">
+    <header className={`w-full backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90' : 'bg-white/90'} border-b ${isDarkMode ? 'border-slate-800/50' : 'border-slate-200/50'} relative z-50 transition-colors duration-300`}>
       <div className="mx-auto px-6 py-4 flex items-center justify-between">
+        
         {/* Logo */}
         <button 
           onClick={() => handleNavigation({ name: "Dashboard", path: "/" })}
-          className="flex items-center gap-3 hover:scale-105 transition-transform"
+          className="flex items-center gap-3 hover:scale-105 transition-transform group"
         >
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-teal-400 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:shadow-indigo-500/40 transition-all">
             <Wallet className="w-7 h-7 text-white" />
           </div>
-          <span className="text-white font-bold text-xl hidden sm:block">GoalFin</span>
+          <span className={`${isDarkMode ? 'text-white' : 'text-slate-900'} font-bold text-xl hidden sm:block transition-colors`}>GoalFin</span>
         </button>
 
         {/* Menu Desktop */}
         <div className="hidden lg:flex flex-1 justify-center">
-          <nav className="relative flex space-x-6 bg-white/10 dark:bg-white/10 rounded-full px-6 py-4 backdrop-blur-sm border border-white/20">
+          <nav className={`relative flex space-x-2 ${isDarkMode ? 'bg-slate-800/40' : 'bg-slate-200/70'} rounded-2xl px-2 py-2 backdrop-blur-md border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-300/50'}`}>
             {navItems.map((item) => {
               const isActive = activeItem === item.name;
               return (
                 <button 
                   key={item.name} 
                   onClick={() => handleNavigation(item)}
-                  className="relative px-6 py-2 text-white text-lg font-medium transition-colors hover:text-gray-200"
+                  className={`relative px-6 py-3 ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} text-sm md:text-base font-medium transition-all rounded-xl`}
                 >
                   {isActive && (
                     <motion.div
                       layoutId="active-pill"
-                      className="absolute inset-0 bg-white dark:bg-white rounded-full shadow-lg"
+                      className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-xl shadow-lg shadow-indigo-500/25"
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
                   )}
-                  <span className={isActive ? "relative text-gray-900 font-semibold" : "relative"}>
+                  <span className={`relative ${isActive ? 'text-white font-semibold' : ''} transition-colors`}>
                     {item.name}
                   </span>
                 </button>
@@ -108,7 +109,7 @@ const Navbar: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className="w-12 h-12 bg-gray-800/60 hover:bg-gray-700/60 dark:bg-gray-800/60 dark:hover:bg-gray-700/60 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition-all backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50"
+              className={`w-12 h-12 ${isDarkMode ? 'bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 hover:text-white border-slate-700/30' : 'bg-slate-200/60 hover:bg-slate-300/80 text-slate-600 hover:text-slate-900 border-slate-300/30'} rounded-xl flex items-center justify-center transition-all backdrop-blur-sm border shadow-lg hover:shadow-xl`}
             >
               <Search className="w-5 h-5" />
             </button>
@@ -119,23 +120,24 @@ const Navbar: React.FC = () => {
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute right-0 top-14 w-96 bg-gray-800/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-700/50 p-4 z-[9999]"
+                  transition={{ duration: 0.15 }}
+                  className={`absolute right-0 top-14 w-96 ${isDarkMode ? 'bg-slate-800/95 border-slate-700/50' : 'bg-white/95 border-slate-200/50'} backdrop-blur-xl rounded-2xl shadow-2xl border p-6 z-[9999]`}
                 >
                   <input
                     type="text"
                     placeholder="Cerca transazioni, portfolio, obiettivi..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-gray-700/50 dark:bg-gray-700/50 text-white placeholder-gray-400 rounded-xl px-4 py-3 border border-gray-600/50 focus:border-blue-500/50 focus:outline-none"
+                    className={`w-full ${isDarkMode ? 'bg-slate-700/50 text-white placeholder-slate-400 border-slate-600/30' : 'bg-slate-100/50 text-slate-900 placeholder-slate-500 border-slate-300/30'} rounded-xl px-4 py-3 text-sm md:text-base border focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all`}
                     autoFocus
                   />
                   
                   {/* Risultati di ricerca */}
                   {searchTerm && (
-                    <div className="mt-3 max-h-80 overflow-y-auto">
+                    <div className="mt-4 max-h-80 overflow-y-auto">
                       {hasResults ? (
                         <>
-                          <div className="text-gray-400 text-sm font-medium mb-3">
+                          <div className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} text-xs md:text-sm font-medium mb-3`}>
                             {searchResults.length} risultat{searchResults.length === 1 ? 'o' : 'i'}
                           </div>
                           <div className="space-y-2">
@@ -143,21 +145,21 @@ const Navbar: React.FC = () => {
                               <button
                                 key={result.id}
                                 onClick={() => handleSearchResultClick(result)}
-                                className="w-full text-left px-3 py-3 hover:bg-gray-700/50 rounded-lg transition-colors group"
+                                className={`w-full text-left px-4 py-3 ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-100/50'} rounded-xl transition-all group border border-transparent`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <span className="text-2xl">{result.icon}</span>
+                                  <span className="text-lg">{result.icon}</span>
                                   <div className="flex-1">
-                                    <div className="text-white font-medium group-hover:text-blue-300 transition-colors">
+                                    <div className={`${isDarkMode ? 'text-white group-hover:text-indigo-400' : 'text-slate-900 group-hover:text-indigo-600'} font-medium transition-colors text-sm md:text-base`}>
                                       {result.title}
                                     </div>
-                                    <div className="text-gray-400 text-sm">
+                                    <div className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} text-xs md:text-sm`}>
                                       {result.subtitle}
                                     </div>
                                   </div>
                                   {result.amount && (
                                     <div className="text-right">
-                                      <div className="text-white font-medium">
+                                      <div className={`${isDarkMode ? 'text-white' : 'text-slate-900'} font-semibold text-sm md:text-base`}>
                                         €{result.amount.toLocaleString()}
                                       </div>
                                     </div>
@@ -168,10 +170,10 @@ const Navbar: React.FC = () => {
                           </div>
                         </>
                       ) : (
-                        <div className="text-center py-8 text-gray-400">
+                        <div className={`text-center py-8 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                           <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          <p>Nessun risultato trovato</p>
-                          <p className="text-sm">Prova con termini diversi</p>
+                          <p className="text-sm md:text-base">Nessun risultato trovato</p>
+                          <p className="text-xs md:text-sm">Prova con termini diversi</p>
                         </div>
                       )}
                     </div>
@@ -179,14 +181,14 @@ const Navbar: React.FC = () => {
                   
                   {/* Ricerche recenti */}
                   {!searchTerm && (
-                    <div className="mt-3">
-                      <div className="text-gray-400 text-sm font-medium mb-3">Ricerche recenti</div>
+                    <div className="mt-4">
+                      <div className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} text-xs md:text-sm font-medium mb-3`}>Ricerche recenti</div>
                       <div className="space-y-1">
                         {["Stipendio", "Affitto", "Netflix", "Vacanza Giappone"].map((search) => (
                           <button 
                             key={search} 
                             onClick={() => setSearchTerm(search)}
-                            className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors text-sm"
+                            className={`w-full text-left px-3 py-2 ${isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'} rounded-lg transition-colors text-xs md:text-sm`}
                           >
                             {search}
                           </button>
@@ -203,11 +205,11 @@ const Navbar: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="w-12 h-12 bg-gray-800/60 hover:bg-gray-700/60 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition-all backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50 relative"
+              className={`w-12 h-12 ${isDarkMode ? 'bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 hover:text-white border-slate-700/30' : 'bg-slate-200/60 hover:bg-slate-300/80 text-slate-600 hover:text-slate-900 border-slate-300/30'} rounded-xl flex items-center justify-center transition-all backdrop-blur-sm border shadow-lg hover:shadow-xl relative`}
             >
               <Bell className="w-5 h-5" />
               {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
                   {notifications.length}
                 </span>
               )}
@@ -219,15 +221,16 @@ const Navbar: React.FC = () => {
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute right-0 top-14 w-96 bg-gray-800/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-700/50 p-4 z-[9999]"
+                  transition={{ duration: 0.15 }}
+                  className={`absolute right-0 top-14 w-96 ${isDarkMode ? 'bg-slate-800/95 border-slate-700/50' : 'bg-white/95 border-slate-200/50'} backdrop-blur-xl rounded-2xl shadow-2xl border p-6 z-[9999]`}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-semibold text-lg">Notifiche</h3>
+                    <h3 className={`${isDarkMode ? 'text-white' : 'text-slate-900'} font-semibold text-base md:text-lg`}>Notifiche</h3>
                     <button 
                       onClick={() => {
                         console.log('Mark all as read - funzionalità da implementare');
                       }}
-                      className="text-blue-400 text-sm hover:text-blue-300"
+                      className={`${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} text-xs md:text-sm font-medium transition-colors`}
                     >
                       Segna tutte come lette
                     </button>
@@ -235,18 +238,18 @@ const Navbar: React.FC = () => {
                   
                   <div className="space-y-3 max-h-80 overflow-y-auto">
                     {notifications.map((notification) => (
-                      <div key={notification.id} className="p-3 bg-gray-700/30 rounded-xl hover:bg-gray-700/50 transition-colors cursor-pointer">
+                      <div key={notification.id} className={`p-4 ${isDarkMode ? 'bg-slate-700/30 hover:bg-slate-700/50 border-slate-600/20' : 'bg-slate-100/50 hover:bg-slate-200/50 border-slate-300/20'} rounded-xl transition-colors cursor-pointer border`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="text-white font-medium text-sm">{notification.title}</div>
+                            <div className={`${isDarkMode ? 'text-white' : 'text-slate-900'} font-medium text-sm md:text-base`}>{notification.title}</div>
                             {notification.description && (
-                              <div className="text-gray-400 text-sm mt-1">{notification.description}</div>
+                              <div className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} text-xs md:text-sm mt-1`}>{notification.description}</div>
                             )}
-                            <div className="text-gray-500 text-xs mt-2">{notification.time}</div>
+                            <div className={`${isDarkMode ? 'text-slate-500' : 'text-slate-400'} text-xs mt-2`}>{notification.time}</div>
                           </div>
                           {notification.amount && (
-                            <div className={`font-semibold text-sm ${
-                              notification.amount.startsWith('+') ? 'text-green-400' : 'text-red-400'
+                            <div className={`font-semibold text-sm md:text-base ${
+                              notification.amount.startsWith('+') ? (isDarkMode ? 'text-emerald-400' : 'text-emerald-600') : (isDarkMode ? 'text-red-400' : 'text-red-600')
                             }`}>
                               {notification.amount}
                             </div>
@@ -256,8 +259,8 @@ const Navbar: React.FC = () => {
                     ))}
                   </div>
                   
-                  <div className="mt-4 pt-3 border-t border-gray-700/50">
-                    <button className="w-full text-center text-blue-400 hover:text-blue-300 text-sm font-medium">
+                  <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'}`}>
+                    <button className={`w-full text-center ${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} text-xs md:text-sm font-medium transition-colors`}>
                       Vedi tutte le notifiche
                     </button>
                   </div>
@@ -266,10 +269,10 @@ const Navbar: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          {/* Dark Mode Toggle - ORA FUNZIONANTE */}
+          {/* Dark Mode Toggle */}
           <button
             onClick={toggleTheme}
-            className="w-12 h-12 bg-gray-800/60 hover:bg-gray-700/60 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition-all backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50"
+            className={`w-12 h-12 ${isDarkMode ? 'bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 border-slate-700/30' : 'bg-slate-200/60 hover:bg-slate-300/80 text-slate-600 border-slate-300/30'} hover:text-amber-400 hover:border-amber-500/30 rounded-xl flex items-center justify-center transition-all backdrop-blur-sm border shadow-lg hover:shadow-xl`}
           >
             {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
@@ -278,9 +281,9 @@ const Navbar: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setShowProfile(!showProfile)}
-              className="flex items-center gap-2 bg-gray-800/60 hover:bg-gray-700/60 rounded-full p-2 text-gray-300 hover:text-white transition-all backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50"
+              className={`flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 hover:text-white border-slate-700/30' : 'bg-slate-200/60 hover:bg-slate-300/80 text-slate-600 hover:text-slate-900 border-slate-300/30'} rounded-xl p-2 transition-all backdrop-blur-sm border shadow-lg hover:shadow-xl`}
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
                 <User className="w-4 h-4 text-white" />
               </div>
               <ChevronDown className="w-4 h-4" />
@@ -292,42 +295,43 @@ const Navbar: React.FC = () => {
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute right-0 top-14 w-64 bg-gray-800/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-700/50 p-4 z-[9999]"
+                  transition={{ duration: 0.15 }}
+                  className={`absolute right-0 top-14 w-64 ${isDarkMode ? 'bg-slate-800/95 border-slate-700/50' : 'bg-white/95 border-slate-200/50'} backdrop-blur-xl rounded-2xl shadow-2xl border p-6 z-[9999]`}
                 >
-                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-700/50">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <div className={`flex items-center gap-3 mb-4 pb-4 border-b ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'}`}>
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
                       <User className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <div className="text-white font-semibold">Mario Rossi</div>
-                      <div className="text-gray-400 text-sm">mario@email.com</div>
+                      <div className={`${isDarkMode ? 'text-white' : 'text-slate-900'} font-semibold text-sm md:text-base`}>Mario Rossi</div>
+                      <div className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} text-xs md:text-sm`}>mario@email.com</div>
                     </div>
                   </div>
                   
                   <div className="space-y-1">
                     <button 
                       onClick={() => console.log('Navigate to profile')}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                      className={`w-full flex items-center gap-3 px-3 py-3 ${isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'} rounded-xl transition-colors`}
                     >
                       <User className="w-4 h-4" />
-                      <span>Il mio profilo</span>
+                      <span className="text-xs md:text-sm font-medium">Il mio profilo</span>
                     </button>
                     <button 
                       onClick={() => console.log('Navigate to settings')}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                      className={`w-full flex items-center gap-3 px-3 py-3 ${isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'} rounded-xl transition-colors`}
                     >
                       <Settings className="w-4 h-4" />
-                      <span>Impostazioni</span>
+                      <span className="text-xs md:text-sm font-medium">Impostazioni</span>
                     </button>
                   </div>
                   
-                  <div className="mt-4 pt-3 border-t border-gray-700/50">
+                  <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'}`}>
                     <button 
                       onClick={() => console.log('Logout - funzionalità da implementare')}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                      className={`w-full flex items-center gap-3 px-3 py-3 ${isDarkMode ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10' : 'text-red-600 hover:text-red-700 hover:bg-red-500/5'} rounded-xl transition-colors`}
                     >
                       <LogOut className="w-4 h-4" />
-                      <span>Logout</span>
+                      <span className="text-xs md:text-sm font-medium">Logout</span>
                     </button>
                   </div>
                 </motion.div>
@@ -338,15 +342,15 @@ const Navbar: React.FC = () => {
 
         {/* Mobile Menu Button */}
         <div className="lg:hidden flex items-center space-x-3">
-          <button className="w-10 h-10 bg-gray-800/60 rounded-full flex items-center justify-center text-gray-300">
+          <button className={`w-10 h-10 ${isDarkMode ? 'bg-slate-800/60 text-slate-400' : 'bg-slate-200/60 text-slate-600'} rounded-xl flex items-center justify-center shadow-lg`}>
             <Bell className="w-5 h-5" />
           </button>
           
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-white focus:outline-none"
+            className={`${isDarkMode ? 'text-white hover:bg-slate-700/50' : 'text-slate-900 hover:bg-slate-200/50'} focus:outline-none p-2 rounded-xl transition-colors`}
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -364,7 +368,8 @@ const Navbar: React.FC = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-gray-800/95 backdrop-blur-lg border-t border-gray-700/50"
+            transition={{ duration: 0.2 }}
+            className={`lg:hidden ${isDarkMode ? 'bg-slate-800/95 border-slate-700/50' : 'bg-white/95 border-slate-200/50'} backdrop-blur-lg border-t`}
           >
             <div className="px-6 py-4 space-y-2">
               {navItems.map((item) => {
@@ -373,10 +378,10 @@ const Navbar: React.FC = () => {
                   <button
                     key={item.name}
                     onClick={() => handleNavigation(item)}
-                    className={`block w-full text-left px-4 py-3 rounded-xl text-white font-medium transition-colors ${
+                    className={`block w-full text-left px-4 py-3 rounded-xl font-medium transition-all text-sm md:text-base ${
                       isActive 
-                        ? "bg-white text-gray-900" 
-                        : "bg-gray-700/50 hover:bg-gray-700/70"
+                        ? "bg-gradient-to-r from-indigo-500 to-emerald-500 text-white shadow-lg" 
+                        : (isDarkMode ? "bg-slate-700/30 text-slate-300 hover:bg-slate-700/50 hover:text-white" : "bg-slate-100/50 text-slate-600 hover:bg-slate-200/50 hover:text-slate-900")
                     }`}
                   >
                     {item.name}
@@ -384,14 +389,14 @@ const Navbar: React.FC = () => {
                 );
               })}
               
-              <div className="pt-3 mt-3 border-t border-gray-700/50">
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-xl transition-colors">
+              <div className={`pt-3 mt-3 border-t ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} space-y-2`}>
+                <button className={`w-full flex items-center gap-3 px-4 py-3 ${isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'} rounded-xl transition-colors text-sm md:text-base`}>
                   <User className="w-5 h-5" />
-                  <span>Profilo</span>
+                  <span className="font-medium">Profilo</span>
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-xl transition-colors">
+                <button className={`w-full flex items-center gap-3 px-4 py-3 ${isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-700/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'} rounded-xl transition-colors text-sm md:text-base`}>
                   <Settings className="w-5 h-5" />
-                  <span>Impostazioni</span>
+                  <span className="font-medium">Impostazioni</span>
                 </button>
               </div>
             </div>

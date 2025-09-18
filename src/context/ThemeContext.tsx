@@ -8,6 +8,8 @@ interface ThemeContextType {
   isDarkMode: boolean;
 }
 
+
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const useTheme = () => {
@@ -37,7 +39,17 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   // Applica la classe al document
   useEffect(() => {
-    document.documentElement.className = theme;
+    const root = document.documentElement;
+    
+    // Rimuovi entrambe le classi prima di aggiungere quella nuova
+    root.classList.remove('dark', 'light');
+    
+    // Aggiungi solo la classe corrente
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.add('light');  // Questo ora funzionerà
+    }
   }, [theme]);
 
   const value = {

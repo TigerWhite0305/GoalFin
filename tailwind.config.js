@@ -1,12 +1,13 @@
-/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: 'class', // Assicurati che questo ci sia
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: [
+    // Plugin per supportare .light
+    function({ addVariant }) {
+      addVariant('light', '.light &')
+    }
+  ],
 }
-
-
