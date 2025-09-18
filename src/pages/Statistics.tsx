@@ -1,59 +1,71 @@
 // src/pages/Statistics.tsx
-import React, { useState, useRef } from "react";
-import { Heart, Home, Car, Gamepad2, ShoppingCart, DollarSign, FileText, Image } from "lucide-react";
-import { useToast } from "../context/ToastContext";
+import React, { useRef } from "react";
+import { Heart, Home, Car, Gamepad2, ShoppingCart, DollarSign } from "lucide-react";
 
-// Import dei componenti separati
+// Import hook personalizzato e types
+import useAdvancedCharts from "../hooks/useAdvancedCharts";
+
+// Types locali per evitare import ciclici
+interface ExportConfig {
+  chartId: string;
+  chartName: string;
+  availableFormats: readonly ('PNG' | 'SVG' | 'PDF' | 'CSV' | 'JSON' | 'Excel')[];
+  data: any;
+  chartRef?: React.RefObject<HTMLElement | null>;
+}
+
+// Import componenti UI
 import StatisticsHeader from "../components/statistics/StatisticsHeader";
-import ExpenseChart from "../components/statistics/ExpenseChart";
-import CategoryBreakdown from "../components/statistics/CategoryBreakdown";
-import ExportModal from "../components/statistics/ExportModal";
+import AdvancedFiltersDashboard from "../components/statistics/AdvancedFiltersDashboard";
+import GranularExportSystem from "../components/statistics/GranularExportSystem";
 
-// Types
-interface ChartData {
-  name: string;
-  value: number;
-  color: string;
-  percentage: number;
-  icon: React.ComponentType<any>;
-}
-
-interface FilterSettings {
-  period: '1M' | '3M' | '6M' | '1Y' | 'ALL';
-  categories: string[];
-  chartType: 'pie' | 'bar' | 'line';
-}
-
-interface ExportSettings {
-  format: 'CSV' | 'JSON' | 'Excel';
-  includeCharts: boolean;
-  dateRange: string;
-}
+// Import grafici
+import ExpenseChart from "../components/statistics/chart/ExpenseChart";
+import CategoryBreakdown from "../components/statistics/chart/CategoryBreakdown";
+import TrendsLineChart from "../components/statistics/chart/TrendsLineChart";
+import MonthlyAreaChart from "../components/statistics/chart/MonthlyAreaChart";
+import SpendingHeatmap from "../components/statistics/chart/SpendingHeatmap";
+import GoalsProgressChart from "../components/statistics/chart/GoalsProgressChart";
+import ChartHoverExport from "../components/statistics/ChartHoverExport";
 
 const Statistics: React.FC = () => {
-  const { addToast } = useToast();
-  const chartRef = useRef<HTMLDivElement>(null);
+  // Refs per i grafici - corretti per HTMLElement
+  const expenseChartRef = useRef<HTMLElement>(null);
+  const trendsChartRef = useRef<HTMLElement>(null);
+  const areaChartRef = useRef<HTMLElement>(null);
+  const heatmapRef = useRef<HTMLElement>(null);
+  const goalsChartRef = useRef<HTMLElement>(null);
+  const categoryRef = useRef<HTMLElement>(null);
 
-  // Estados
-  const [selectedPeriod, setSelectedPeriod] = useState<'1M' | '3M' | '6M' | '1Y' | 'ALL'>('6M');
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
-  const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
+  // Hook sistema avanzato
+  const {
+    filters,
+    showAdvancedFilters,
+    showExportModal,
+    currentExportConfig,
+    updateFilters,
+    resetFilters,
+    applyFilters,
+    setShowAdvancedFilters,
+    openExportModal,
+    quickExport,
+    advancedExport,
+    setShowExportModal,
+    registerChartRef,
+    getFilteredExpenseData,
+    getFilteredTrendsData,
+    getFilteredGoalsData
+  } = useAdvancedCharts();
 
-  // Filter & Export Settings
-  const [filters, setFilters] = useState<FilterSettings>({
-    period: '6M',
-    categories: [],
-    chartType: 'pie'
-  });
-
-  const [exportSettings, setExportSettings] = useState<ExportSettings>({
-    format: 'CSV',
-    includeCharts: false,
-    dateRange: '6M'
-  });
+  // Registra i ref dei grafici
+  React.useEffect(() => {
+    registerChartRef('expense-chart', expenseChartRef);
+    registerChartRef('trends-chart', trendsChartRef);
+    registerChartRef('area-chart', areaChartRef);
+    registerChartRef('heatmap-chart', heatmapRef);
+    registerChartRef('goals-chart', goalsChartRef);
+    registerChartRef('category-breakdown', categoryRef);
+  }, [registerChartRef]);
 
   // Dati dinamici basati sui filtri
   const getFilteredData = () => {
@@ -67,122 +79,41 @@ const Statistics: React.FC = () => {
       { name: "Altro", value: 150, color: "#06D6A0", icon: DollarSign },
     ];
 
-    const periodMultiplier = selectedPeriod === '1M' ? 0.5 : 
-                            selectedPeriod === '3M' ? 0.8 : 
-                            selectedPeriod === '6M' ? 1 : 
-                            selectedPeriod === '1Y' ? 1.5 : 2;
+    // Applica filtri del sistema avanzato
+    let filteredData = baseExpenseData;
 
-    const filteredData = baseExpenseData.map(item => ({
+    // Filtra per categorie se specificate
+    if (filters.expenseCategories.length > 0) {
+      filteredData = filteredData.filter(item => 
+        filters.expenseCategories.includes(item.name)
+      );
+    }
+
+    // Filtra per range importi
+    filteredData = filteredData.filter(item => 
+      item.value >= filters.expenseMinAmount && 
+      item.value <= filters.expenseMaxAmount
+    );
+
+    // Applica moltiplicatore periodo
+    const periodMultiplier = filters.globalPeriod === '1M' ? 0.5 : 
+                            filters.globalPeriod === '3M' ? 0.8 : 
+                            filters.globalPeriod === '6M' ? 1 : 
+                            filters.globalPeriod === '1Y' ? 1.5 : 2;
+
+    const processedData = filteredData.map(item => ({
       ...item,
       value: Math.round(item.value * periodMultiplier)
     }));
 
-    const total = filteredData.reduce((sum, item) => sum + item.value, 0);
-    return filteredData.map(item => ({
+    const total = processedData.reduce((sum, item) => sum + item.value, 0);
+    return processedData.map(item => ({
       ...item,
       percentage: total > 0 ? parseFloat(((item.value / total) * 100).toFixed(1)) : 0
     }));
   };
 
   const expenseData = getFilteredData();
-
-  // Handler Functions
-  const handlePeriodChange = (newPeriod: typeof selectedPeriod) => {
-    setSelectedPeriod(newPeriod);
-    addToast(`Periodo cambiato a ${newPeriod}`, 'info');
-  };
-
-  const handleCategoryFilter = (category: string) => {
-    if (category === 'all') {
-      setSelectedCategories(['all']);
-    } else {
-      const newCategories = selectedCategories.includes(category)
-        ? selectedCategories.filter(c => c !== category)
-        : [...selectedCategories.filter(c => c !== 'all'), category];
-      
-      setSelectedCategories(newCategories.length === 0 ? ['all'] : newCategories);
-    }
-    addToast(`Filtri categoria aggiornati`, 'info');
-  };
-
-  const handleChartTypeChange = (type: 'pie' | 'bar') => {
-    setChartType(type);
-    addToast(`Vista cambiata a ${type === 'pie' ? 'Torta' : 'Barre'}`, 'info');
-  };
-
-  // Export Functions
-  const exportToCSV = () => {
-    const csvContent = [
-      ['Categoria', 'Importo', 'Percentuale'],
-      ...expenseData.map(item => [item.name, item.value, `${item.percentage}%`])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `statistiche_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    
-    addToast('File CSV scaricato con successo!', 'success');
-  };
-
-  const exportToJSON = () => {
-    const jsonData = {
-      period: selectedPeriod,
-      exportDate: new Date().toISOString(),
-      expenses: expenseData,
-      summary: {
-        total: expenseData.reduce((sum, item) => sum + item.value, 0),
-        categories: expenseData.length
-      }
-    };
-
-    const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `statistiche_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    
-    addToast('File JSON scaricato con successo!', 'success');
-  };
-
-  const exportChart = async () => {
-    if (!chartRef.current) return;
-    
-    try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(chartRef.current);
-      const url = canvas.toDataURL('image/png');
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `grafico_statistiche_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.png`;
-      link.click();
-      
-      addToast('Grafico esportato come PNG!', 'success');
-    } catch (error) {
-      addToast('Errore nell\'esportazione del grafico', 'error');
-    }
-  };
-
-  const handleExport = () => {
-    switch (exportSettings.format) {
-      case 'CSV':
-        exportToCSV();
-        break;
-      case 'JSON':
-        exportToJSON();
-        break;
-      case 'Excel':
-        addToast('Export Excel in sviluppo...', 'info');
-        break;
-    }
-    setShowExportModal(false);
-  };
 
   // Utility functions
   const formatCurrency = (amount: number) => {
@@ -219,146 +150,182 @@ const Statistics: React.FC = () => {
     return null;
   };
 
+  // Configurazioni export per ogni grafico
+  const getExportConfig = (chartId: string, chartName: string): ExportConfig => ({
+    chartId,
+    chartName,
+    availableFormats: ['PNG', 'CSV', 'JSON', 'PDF'] as const,
+    data: expenseData, // Qui dovresti passare i dati specifici del grafico
+    chartRef: expenseChartRef // Qui il ref specifico del grafico
+  });
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 lg:p-6 space-y-6">
-      
-      {/* Header */}
-      <StatisticsHeader
-        selectedPeriod={selectedPeriod}
-        onPeriodChange={handlePeriodChange}
-        onToggleFilters={() => setShowFilters(!showFilters)}
-        onToggleSettings={() => setShowSettings(!showSettings)}
-        onShowExportModal={() => setShowExportModal(true)}
-      />
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
-          <h3 className="text-xl font-bold mb-4">Filtri Avanzati</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Chart Type */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Tipo Grafico</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleChartTypeChange('pie')}
-                  className={`px-3 py-2 rounded-lg text-sm transition ${
-                    chartType === 'pie' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
-                >
-                  Torta
-                </button>
-                <button
-                  onClick={() => handleChartTypeChange('bar')}
-                  className={`px-3 py-2 rounded-lg text-sm transition ${
-                    chartType === 'bar' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
-                >
-                  Barre
-                </button>
-              </div>
-            </div>
-
-            {/* Categories Filter */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Categorie</label>
-              <div className="flex flex-wrap gap-2">
-                {['all', 'Casa', 'Cibo', 'Trasporti', 'Shopping'].map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => handleCategoryFilter(category)}
-                    className={`px-3 py-1 rounded-lg text-xs transition ${
-                      selectedCategories.includes(category)
-                        ? 'bg-purple-600'
-                        : 'bg-gray-700 hover:bg-gray-600'
-                    }`}
-                  >
-                    {category === 'all' ? 'Tutte' : category}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Azioni Rapide</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={exportChart}
-                  className="px-3 py-2 rounded-lg text-sm bg-green-600 hover:bg-green-700 transition flex items-center gap-1"
-                >
-                  <Image className="w-4 h-4" />
-                  PNG
-                </button>
-                <button
-                  onClick={exportToCSV}
-                  className="px-3 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 transition flex items-center gap-1"
-                >
-                  <FileText className="w-4 h-4" />
-                  CSV
-                </button>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="w-full p-4 lg:p-6">
+        
+        {/* Header con sistema avanzato */}
+        <div className="mb-8">
+          <StatisticsHeader
+            selectedPeriod={filters.globalPeriod}
+            onPeriodChange={(period) => updateFilters({ globalPeriod: period })}
+            onToggleFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            onToggleSettings={() => {/* Mantieni logica settings esistente se necessaria */}}
+            onShowExportModal={() => openExportModal(getExportConfig('global', 'Dashboard Completa'))}
+          />
         </div>
-      )}
 
-      {/* Settings Panel */}
-      {showSettings && (
-        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
-          <h3 className="text-xl font-bold mb-4">Impostazioni</h3>
+        {/* Charts Grid Layout con Export Hover */}
+        <div className="space-y-12">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">Formato Valuta</label>
-              <select className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
-                <option>EUR (€)</option>
-                <option>USD ($)</option>
-                <option>GBP (£)</option>
-              </select>
+          {/* Sezione 1: Grafici Principali Spese */}
+          <section className="w-full">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-pink-500 rounded-full"></div>
+              <h2 className="text-2xl font-bold text-white">Analisi Spese</h2>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">Colori Grafici</label>
-              <select className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
-                <option>Colorato</option>
-                <option>Monocromatico</option>
-                <option>Alto Contrasto</option>
-              </select>
+            <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6 w-full items-start">
+              <div className="2xl:col-span-2 w-full relative">
+                {/* Hover Export per ExpenseChart */}
+                <ChartHoverExport
+                  chartId="expense-chart"
+                  chartName="Grafico Spese"
+                  availableFormats={['PNG', 'CSV', 'JSON', 'PDF']}
+                  onQuickExport={(format) => quickExport('expense-chart', format)}
+                  onAdvancedExport={() => openExportModal(getExportConfig('expense-chart', 'Grafico Spese'))}
+                />
+                
+                <ExpenseChart
+                  ref={expenseChartRef}
+                  data={expenseData}
+                  chartType={filters.expenseChartType}
+                  onChartTypeChange={(type) => updateFilters({ expenseChartType: type })}
+                  formatCurrency={formatCurrency}
+                  getTotalExpenses={getTotalExpenses}
+                  customTooltip={CustomTooltip}
+                />
+              </div>
+              
+              <div className="2xl:col-span-1 w-full relative">
+                {/* Hover Export per CategoryBreakdown */}
+                <ChartHoverExport
+                  chartId="category-breakdown"
+                  chartName="Dettaglio Categorie"
+                  availableFormats={['PNG', 'CSV', 'JSON']}
+                  onQuickExport={(format) => quickExport('category-breakdown', format)}
+                  onAdvancedExport={() => openExportModal(getExportConfig('category-breakdown', 'Dettaglio Categorie'))}
+                />
+                
+                <CategoryBreakdown
+                  ref={categoryRef}
+                  data={expenseData}
+                  formatCurrency={formatCurrency}
+                  getTotalExpenses={getTotalExpenses}
+                  selectedPeriod={filters.globalPeriod}
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </section>
 
-      {/* Main Chart Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <ExpenseChart
-          ref={chartRef}
-          data={expenseData}
-          chartType={chartType}
-          onChartTypeChange={handleChartTypeChange}
-          formatCurrency={formatCurrency}
-          getTotalExpenses={getTotalExpenses}
-          customTooltip={CustomTooltip}
+          {/* Sezione 2: Trend e Crescita */}
+          <section className="w-full">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full"></div>
+              <h2 className="text-2xl font-bold text-white">Trend e Crescita</h2>
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-start">
+              <div className="w-full relative">
+                <ChartHoverExport
+                  chartId="trends-chart"
+                  chartName="Trend Finanziario"
+                  availableFormats={['PNG', 'CSV', 'JSON']}
+                  onQuickExport={(format) => quickExport('trends-chart', format)}
+                  onAdvancedExport={() => openExportModal(getExportConfig('trends-chart', 'Trend Finanziario'))}
+                />
+                
+                <TrendsLineChart
+                  ref={trendsChartRef}
+                  formatCurrency={formatCurrency}
+                  selectedPeriod={filters.globalPeriod}
+                />
+              </div>
+              
+              <div className="w-full relative">
+                <ChartHoverExport
+                  chartId="area-chart"
+                  chartName="Crescita Patrimonio"
+                  availableFormats={['PNG', 'CSV', 'JSON']}
+                  onQuickExport={(format) => quickExport('area-chart', format)}
+                  onAdvancedExport={() => openExportModal(getExportConfig('area-chart', 'Crescita Patrimonio'))}
+                />
+                
+                <MonthlyAreaChart
+                  ref={areaChartRef}
+                  formatCurrency={formatCurrency}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Sezione 3: Analisi Avanzate */}
+          <section className="w-full">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-purple-500 to-indigo-500 rounded-full"></div>
+              <h2 className="text-2xl font-bold text-white">Analisi Avanzate</h2>
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-start">
+              <div className="w-full relative">
+                <ChartHoverExport
+                  chartId="heatmap-chart"
+                  chartName="Calendario Spese"
+                  availableFormats={['PNG', 'CSV', 'JSON']}
+                  onQuickExport={(format) => quickExport('heatmap-chart', format)}
+                  onAdvancedExport={() => openExportModal(getExportConfig('heatmap-chart', 'Calendario Spese'))}
+                />
+                
+                <SpendingHeatmap
+                  ref={heatmapRef}
+                  formatCurrency={formatCurrency}
+                />
+              </div>
+              
+              <div className="w-full relative">
+                <ChartHoverExport
+                  chartId="goals-chart"
+                  chartName="Progresso Obiettivi"
+                  availableFormats={['PNG', 'CSV', 'JSON', 'PDF']}
+                  onQuickExport={(format) => quickExport('goals-chart', format)}
+                  onAdvancedExport={() => openExportModal(getExportConfig('goals-chart', 'Progresso Obiettivi'))}
+                />
+                
+                <GoalsProgressChart
+                  ref={goalsChartRef}
+                  formatCurrency={formatCurrency}
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Dashboard Filtri Avanzati */}
+        <AdvancedFiltersDashboard
+          isOpen={showAdvancedFilters}
+          onClose={() => setShowAdvancedFilters(false)}
+          filters={filters}
+          onFiltersChange={updateFilters}
+          onApplyFilters={applyFilters}
+          onResetFilters={resetFilters}
         />
 
-        <CategoryBreakdown
-          data={expenseData}
-          formatCurrency={formatCurrency}
-          getTotalExpenses={getTotalExpenses}
-          selectedPeriod={selectedPeriod}
-        />
+        {/* Sistema Export Granulare */}
+        {currentExportConfig && (
+          <GranularExportSystem
+            isOpen={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            exportConfig={currentExportConfig}
+            onExport={advancedExport}
+          />
+        )}
       </div>
-
-      {/* Export Modal */}
-      <ExportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        exportSettings={exportSettings}
-        onUpdateSettings={setExportSettings}
-        onExport={handleExport}
-      />
     </div>
   );
 };
