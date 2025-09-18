@@ -27,7 +27,7 @@ interface ExportConfig {
   chartName: string;
   availableFormats: readonly ('PNG' | 'SVG' | 'PDF' | 'CSV' | 'JSON' | 'Excel')[];
   data: any;
-  chartRef?: React.RefObject<HTMLElement | null>;
+  chartRef?: React.RefObject<HTMLElement>;
 }
 
 interface ExportOptions {
@@ -71,8 +71,8 @@ const useAdvancedCharts = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [currentExportConfig, setCurrentExportConfig] = useState<ExportConfig | null>(null);
 
-  // Refs per i grafici - tipo più flessibile
-  const chartRefs = useRef<Record<string, React.RefObject<HTMLElement | null>>>({});
+  // ✅ FIX 1: Refs per i grafici - tipo corretto
+  const chartRefs = useRef<Record<string, React.RefObject<HTMLElement>>>({});
 
   // Funzioni per filtri
   const updateFilters = useCallback((newFilters: Partial<FilterState>) => {
@@ -168,7 +168,7 @@ const useAdvancedCharts = () => {
     }
   }, [currentExportConfig, addToast]);
 
-  // Funzioni di export specifiche
+  // ✅ FIX 2: Funzioni di export specifiche - parametri corretti
   const exportToPNG = async (chartRef: React.RefObject<HTMLElement> | undefined, chartId: string) => {
     if (!chartRef?.current) throw new Error('Riferimento al grafico non trovato');
     
@@ -293,9 +293,9 @@ const useAdvancedCharts = () => {
     return [];
   };
 
-  // Register chart ref - corretto per accettare tipi più flessibili
-  const registerChartRef = useCallback((chartId: string, ref: React.RefObject<HTMLElement | null>) => {
-    chartRefs.current[chartId] = ref as React.RefObject<HTMLElement>;
+  // ✅ FIX 3: Register chart ref - tipo corretto senza casting pericoloso
+  const registerChartRef = useCallback((chartId: string, ref: React.RefObject<HTMLElement>) => {
+    chartRefs.current[chartId] = ref;
   }, []);
 
   return {

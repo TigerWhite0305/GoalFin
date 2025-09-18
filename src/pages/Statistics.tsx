@@ -5,15 +5,6 @@ import { Heart, Home, Car, Gamepad2, ShoppingCart, DollarSign } from "lucide-rea
 // Import hook personalizzato e types
 import useAdvancedCharts from "../hooks/useAdvancedCharts";
 
-// Types locali per evitare import ciclici
-interface ExportConfig {
-  chartId: string;
-  chartName: string;
-  availableFormats: readonly ('PNG' | 'SVG' | 'PDF' | 'CSV' | 'JSON' | 'Excel')[];
-  data: any;
-  chartRef?: React.RefObject<HTMLElement | null>;
-}
-
 // Import componenti UI
 import StatisticsHeader from "../components/statistics/StatisticsHeader";
 import AdvancedFiltersDashboard from "../components/statistics/AdvancedFiltersDashboard";
@@ -28,14 +19,45 @@ import SpendingHeatmap from "../components/statistics/chart/SpendingHeatmap";
 import GoalsProgressChart from "../components/statistics/chart/GoalsProgressChart";
 import ChartHoverExport from "../components/statistics/ChartHoverExport";
 
+// ✅ FIX 1: ExportConfig interface corretta (match con hook)
+interface ExportConfig {
+  chartId: string;
+  chartName: string;
+  availableFormats: readonly ('PNG' | 'SVG' | 'PDF' | 'CSV' | 'JSON' | 'Excel')[];
+  data: any;
+  chartRef?: React.RefObject<HTMLElement>; // Rimosso | null
+}
+
+// ✅ FIX 2: ExportOptions interface (era mancante)
+interface ExportOptions {
+  format: string;
+  fileName: string;
+  includeHeader: boolean;
+  includeTimestamp: boolean;
+  quality: 'low' | 'medium' | 'high';
+  backgroundColor: 'transparent' | 'white' | 'dark';
+  dimensions: { width: number; height: number } | 'auto';
+  dataRange: 'visible' | 'all' | 'filtered';
+  compression: boolean;
+}
+
+// ✅ FIX 3: ChartData interface corretta
+interface ChartData {
+  name: string;
+  value: number;
+  color: string;
+  percentage: number;
+  icon: React.ComponentType<any>;
+}
+
 const Statistics: React.FC = () => {
-  // Refs per i grafici - corretti per HTMLElement
-  const expenseChartRef = useRef<HTMLElement>(null);
-  const trendsChartRef = useRef<HTMLElement>(null);
-  const areaChartRef = useRef<HTMLElement>(null);
-  const heatmapRef = useRef<HTMLElement>(null);
-  const goalsChartRef = useRef<HTMLElement>(null);
-  const categoryRef = useRef<HTMLElement>(null);
+  // ✅ FIX 4: Refs corretti - HTMLDivElement invece di HTMLElement
+  const expenseChartRef = useRef<HTMLDivElement>(null);
+  const trendsChartRef = useRef<HTMLDivElement>(null);
+  const areaChartRef = useRef<HTMLDivElement>(null);
+  const heatmapRef = useRef<HTMLDivElement>(null);
+  const goalsChartRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
 
   // Hook sistema avanzato
   const {
@@ -57,26 +79,26 @@ const Statistics: React.FC = () => {
     getFilteredGoalsData
   } = useAdvancedCharts();
 
-  // Registra i ref dei grafici
+  // ✅ FIX 5: useEffect corretto con casting type-safe
   React.useEffect(() => {
-    registerChartRef('expense-chart', expenseChartRef);
-    registerChartRef('trends-chart', trendsChartRef);
-    registerChartRef('area-chart', areaChartRef);
-    registerChartRef('heatmap-chart', heatmapRef);
-    registerChartRef('goals-chart', goalsChartRef);
-    registerChartRef('category-breakdown', categoryRef);
+    registerChartRef('expense-chart', expenseChartRef as React.RefObject<HTMLElement>);
+    registerChartRef('trends-chart', trendsChartRef as React.RefObject<HTMLElement>);
+    registerChartRef('area-chart', areaChartRef as React.RefObject<HTMLElement>);
+    registerChartRef('heatmap-chart', heatmapRef as React.RefObject<HTMLElement>);
+    registerChartRef('goals-chart', goalsChartRef as React.RefObject<HTMLElement>);
+    registerChartRef('category-breakdown', categoryRef as React.RefObject<HTMLElement>);
   }, [registerChartRef]);
 
   // Dati dinamici basati sui filtri
-  const getFilteredData = () => {
-    const baseExpenseData = [
-      { name: "Casa", value: 1200, color: "#4C6FFF", icon: Home },
-      { name: "Cibo", value: 650, color: "#FF6B6B", icon: DollarSign },
-      { name: "Trasporti", value: 420, color: "#FFD93D", icon: Car },
-      { name: "Intrattenimento", value: 380, color: "#6BCB77", icon: Gamepad2 },
-      { name: "Salute", value: 280, color: "#FF9F1C", icon: Heart },
-      { name: "Shopping", value: 320, color: "#9B5DE5", icon: ShoppingCart },
-      { name: "Altro", value: 150, color: "#06D6A0", icon: DollarSign },
+  const getFilteredData = (): ChartData[] => {
+    const baseExpenseData: ChartData[] = [
+      { name: "Casa", value: 1200, color: "#4C6FFF", icon: Home, percentage: 0 },
+      { name: "Cibo", value: 650, color: "#FF6B6B", icon: DollarSign, percentage: 0 },
+      { name: "Trasporti", value: 420, color: "#FFD93D", icon: Car, percentage: 0 },
+      { name: "Intrattenimento", value: 380, color: "#6BCB77", icon: Gamepad2, percentage: 0 },
+      { name: "Salute", value: 280, color: "#FF9F1C", icon: Heart, percentage: 0 },
+      { name: "Shopping", value: 320, color: "#9B5DE5", icon: ShoppingCart, percentage: 0 },
+      { name: "Altro", value: 150, color: "#06D6A0", icon: DollarSign, percentage: 0 },
     ];
 
     // Applica filtri del sistema avanzato
@@ -150,14 +172,28 @@ const Statistics: React.FC = () => {
     return null;
   };
 
-  // Configurazioni export per ogni grafico
-  const getExportConfig = (chartId: string, chartName: string): ExportConfig => ({
-    chartId,
-    chartName,
-    availableFormats: ['PNG', 'CSV', 'JSON', 'PDF'] as const,
-    data: expenseData, // Qui dovresti passare i dati specifici del grafico
-    chartRef: expenseChartRef // Qui il ref specifico del grafico
-  });
+  // ✅ FIX 6: Configurazioni export corrette per ogni grafico
+  const getExportConfig = (chartId: string, chartName: string): ExportConfig => {
+    const getChartRef = (id: string): React.RefObject<HTMLElement> => {
+      switch (id) {
+        case 'expense-chart': return expenseChartRef as React.RefObject<HTMLElement>;
+        case 'trends-chart': return trendsChartRef as React.RefObject<HTMLElement>;
+        case 'area-chart': return areaChartRef as React.RefObject<HTMLElement>;
+        case 'heatmap-chart': return heatmapRef as React.RefObject<HTMLElement>;
+        case 'goals-chart': return goalsChartRef as React.RefObject<HTMLElement>;
+        case 'category-breakdown': return categoryRef as React.RefObject<HTMLElement>;
+        default: return expenseChartRef as React.RefObject<HTMLElement>;
+      }
+    };
+
+    return {
+      chartId,
+      chartName,
+      availableFormats: ['PNG', 'CSV', 'JSON', 'PDF'] as const,
+      data: expenseData, // Qui dovresti passare i dati specifici del grafico
+      chartRef: getChartRef(chartId)
+    };
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -215,13 +251,14 @@ const Statistics: React.FC = () => {
                   onAdvancedExport={() => openExportModal(getExportConfig('category-breakdown', 'Dettaglio Categorie'))}
                 />
                 
-                <CategoryBreakdown
-                  ref={categoryRef}
-                  data={expenseData}
-                  formatCurrency={formatCurrency}
-                  getTotalExpenses={getTotalExpenses}
-                  selectedPeriod={filters.globalPeriod}
-                />
+                <div ref={categoryRef}>
+                  <CategoryBreakdown
+                    data={expenseData}
+                    formatCurrency={formatCurrency}
+                    getTotalExpenses={getTotalExpenses}
+                    selectedPeriod={filters.globalPeriod}
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -242,11 +279,12 @@ const Statistics: React.FC = () => {
                   onAdvancedExport={() => openExportModal(getExportConfig('trends-chart', 'Trend Finanziario'))}
                 />
                 
-                <TrendsLineChart
-                  ref={trendsChartRef}
-                  formatCurrency={formatCurrency}
-                  selectedPeriod={filters.globalPeriod}
-                />
+                <div ref={trendsChartRef}>
+                  <TrendsLineChart
+                    formatCurrency={formatCurrency}
+                    selectedPeriod={filters.globalPeriod}
+                  />
+                </div>
               </div>
               
               <div className="w-full relative">
@@ -258,10 +296,11 @@ const Statistics: React.FC = () => {
                   onAdvancedExport={() => openExportModal(getExportConfig('area-chart', 'Crescita Patrimonio'))}
                 />
                 
-                <MonthlyAreaChart
-                  ref={areaChartRef}
-                  formatCurrency={formatCurrency}
-                />
+                <div ref={areaChartRef}>
+                  <MonthlyAreaChart
+                    formatCurrency={formatCurrency}
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -282,10 +321,11 @@ const Statistics: React.FC = () => {
                   onAdvancedExport={() => openExportModal(getExportConfig('heatmap-chart', 'Calendario Spese'))}
                 />
                 
-                <SpendingHeatmap
-                  ref={heatmapRef}
-                  formatCurrency={formatCurrency}
-                />
+                <div ref={heatmapRef}>
+                  <SpendingHeatmap
+                    formatCurrency={formatCurrency}
+                  />
+                </div>
               </div>
               
               <div className="w-full relative">
@@ -297,10 +337,11 @@ const Statistics: React.FC = () => {
                   onAdvancedExport={() => openExportModal(getExportConfig('goals-chart', 'Progresso Obiettivi'))}
                 />
                 
-                <GoalsProgressChart
-                  ref={goalsChartRef}
-                  formatCurrency={formatCurrency}
-                />
+                <div ref={goalsChartRef}>
+                  <GoalsProgressChart
+                    formatCurrency={formatCurrency}
+                  />
+                </div>
               </div>
             </div>
           </section>
