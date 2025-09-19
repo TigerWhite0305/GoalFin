@@ -19,15 +19,17 @@ export const ExpensesCard: React.FC = () => {
   };
 
   return (
-    <div className={`h-full flex flex-col ${isDarkMode ? 'bg-gradient-to-br from-slate-800 via-red-900 to-red-800' : 'bg-gradient-to-br from-red-500 via-red-600 to-pink-600'} rounded-2xl p-4 justify-between shadow-xl border ${isDarkMode ? 'border-red-800/30' : 'border-red-400/30'} hover:shadow-2xl transition-all duration-300`}>
+    <div className={`h-full flex flex-col ${isDarkMode ? 'bg-gradient-to-br from-slate-800 via-red-900 to-red-800' : 'bg-gradient-to-br from-red-500 via-red-600 to-pink-600'} rounded-2xl px-6 py-4 justify-between shadow-xl border ${isDarkMode ? 'border-red-800/30' : 'border-red-400/30'} hover:shadow-2xl transition-all duration-300`}>
       
-      {/* Header con icona - dimensioni corrette */}
+      {/* Header con icona - responsive */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`p-2 ${isDarkMode ? 'bg-red-500/20' : 'bg-red-500/30'} rounded-xl`}>
             <TrendingDown className="w-4 h-4 text-red-200" />
           </div>
-          <h2 className="text-base md:text-lg font-semibold text-white">Uscite</h2>
+          <h2 style={{fontSize: 'clamp(0.875rem, 2vw, 1rem)'}} className="font-semibold text-white">
+            Uscite
+          </h2>
         </div>
         
         {/* Indicatore mese */}
@@ -37,11 +39,11 @@ export const ExpensesCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Sezione centrale con importo principale - dimensioni corrette */}
+      {/* Sezione centrale con importo principale - clamp responsive */}
       <div className="flex flex-col gap-2 my-3">
-        <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight">
+        <p style={{fontSize: 'clamp(1.25rem, 4vw, 1.875rem)'}} className="font-bold text-white tracking-tight">
           -{formatCurrency(amount).replace('€', '')}
-          <span className="text-base md:text-lg text-red-200">€</span>
+          <span style={{fontSize: 'clamp(0.75rem, 2vw, 0.875rem)'}} className="text-red-200">€</span>
         </p>
         
         {/* Comparazione con mese precedente */}
@@ -60,11 +62,6 @@ export const ExpensesCard: React.FC = () => {
           </span>
         </div>
         
-        {/* Badge percentuale - dimensioni corrette */}
-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-400/90 text-red-900 font-semibold backdrop-blur-sm border border-red-300/30 shadow-lg">
-          <TrendingDown className="w-3 h-3" />
-          <span className="text-xs">+{percentage}%</span>
-        </div>
       </div>
 
       {/* Indicatore visivo sottile */}

@@ -342,6 +342,13 @@ const Navbar: React.FC = () => {
 
         {/* Mobile Menu Button */}
         <div className="lg:hidden flex items-center space-x-3">
+          
+          <button
+            onClick={toggleTheme}
+            className={`w-10 h-10 ${isDarkMode ? 'bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 border-slate-700/30' : 'bg-slate-200/60 hover:bg-slate-300/80 text-slate-600 border-slate-300/30'} hover:text-amber-400 hover:border-amber-500/30 rounded-xl flex items-center justify-center transition-all backdrop-blur-sm border shadow-lg hover:shadow-xl`}
+          >
+            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
           <button className={`w-10 h-10 ${isDarkMode ? 'bg-slate-800/60 text-slate-400' : 'bg-slate-200/60 text-slate-600'} rounded-xl flex items-center justify-center shadow-lg`}>
             <Bell className="w-5 h-5" />
           </button>
