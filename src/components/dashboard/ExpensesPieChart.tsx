@@ -24,35 +24,35 @@ export const ExpensesPieChart: React.FC = () => {
 
   const total = categories.reduce((acc, cat) => acc + cat.value, 0);
 
-  // Theme colors - seguendo il nostro design system
+  // Theme colors seguendo il design system GoalFin
   const getThemeColors = () => {
     if (isDarkMode) {
       return {
         // 🌙 Tema Scuro
         background: "bg-gray-900",
-        card: "bg-gray-800",
+        card: "bg-gray-800/40",
         text: {
-          primary: "text-gray-50",
-          secondary: "text-gray-300", 
-          muted: "text-gray-400",
-          subtle: "text-gray-500"
+          primary: "text-gray-50", // #F9FAFB
+          secondary: "text-gray-300", // #D1D5DB
+          muted: "text-gray-400", // #6B7280
+          subtle: "text-gray-500" // #9CA3AF
         },
-        border: "border-gray-700",
-        hover: "hover:bg-gray-800"
+        border: "border-gray-700/30",
+        hover: "hover:bg-gray-700/40"
       };
     } else {
       return {
         // ☀️ Tema Chiaro  
-        background: "bg-white",
-        card: "bg-gray-50",
+        background: "bg-white", // #FEFEFE
+        card: "bg-gray-50/60", // #F8FAFC
         text: {
-          primary: "text-gray-900",
-          secondary: "text-gray-700",
-          muted: "text-gray-600",
+          primary: "text-gray-900", // #0F172A
+          secondary: "text-gray-700", // #334155
+          muted: "text-gray-600", // #64748B
           subtle: "text-gray-500"
         },
-        border: "border-gray-200",
-        hover: "hover:bg-gray-100"
+        border: "border-gray-200/50",
+        hover: "hover:bg-gray-100/80"
       };
     }
   };
@@ -91,25 +91,26 @@ export const ExpensesPieChart: React.FC = () => {
   };
 
   return (
-    <div className={`${theme.background} flex flex-col gap-3 p-4 rounded-2xl h-full shadow-2xl`}>
+    <div className={`${theme.background} ${theme.border} border rounded-2xl p-4 transition-colors duration-300 backdrop-blur-sm h-full flex flex-col`}>
       
-      {/* Header */}
-      <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-2">
-        <h2 className={`${theme.text.primary} text-lg font-bold flex items-center gap-2`}>
-          <TrendingDown className="w-5 h-5 text-red-500" />
-          Grafico Uscite
-        </h2>
-        <button className={`${theme.card} ${theme.hover} ${theme.text.primary} px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 border ${theme.border} w-full xs:w-auto justify-center xs:justify-start`}>
+      {/* Header compatto */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <h3 className={`${theme.text.primary} text-base md:text-lg font-semibold flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent`}>
+          <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+          <span className="hidden sm:inline">Grafico Uscite</span>
+          <span className="sm:hidden">Uscite</span>
+        </h3>
+        <button className={`${theme.card} ${theme.hover} ${theme.text.primary} px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 border ${theme.border} w-full sm:w-auto justify-center sm:justify-start`}>
           <Calendar className="w-3 h-3" />
           {selectedMonth}
         </button>
       </div>
 
-      {/* Contenuto principale - Responsive layout */}
-      <div className="flex flex-col lg:flex-row h-full gap-4 items-center">
+      {/* Layout SEMPRE verticale - grafico sopra, categorie sotto */}
+      <div className="flex-1 flex flex-col gap-4">
         
-        {/* Grafico ad anello - Responsive size */}
-        <div className="relative w-44 h-44 sm:w-52 sm:h-52 lg:w-60 lg:h-60 flex-shrink-0 mx-auto lg:mx-0">
+        {/* Grafico responsive - sempre centrato */}
+        <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 mx-auto flex-shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -135,42 +136,36 @@ export const ExpensesPieChart: React.FC = () => {
             </PieChart>
           </ResponsiveContainer>
 
-          {/* Totale al centro - Responsive text */}
+          {/* Totale al centro responsive */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-xs sm:text-sm ${theme.text.muted} mb-1`}>Totale Spese</span>
-            <span className={`text-lg sm:text-2xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent`}>
+            <span className={`text-xs ${theme.text.muted} mb-0.5`}>Totale</span>
+            <span className={`text-sm sm:text-base md:text-lg font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent`}>
               {formatCurrency(total).replace('.00', '')}
             </span>
-            <span className={`text-xs ${theme.text.subtle} mt-0.5`}>{selectedMonth} 2025</span>
+            <span className={`text-xs ${theme.text.subtle}`}>{selectedMonth}</span>
           </div>
         </div>
 
-        {/* Lista categorie - Ultra responsive */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 flex-1 w-full">
+        {/* Lista categorie - 2 colonne mobile, 3 colonne tablet+ */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
           {categories.map((cat) => {
             const perc = ((cat.value / total) * 100).toFixed(0);
             return (
               <div 
                 key={cat.name} 
-                className={`flex flex-col items-start ${theme.hover} p-2 sm:p-3 rounded-lg transition-colors cursor-pointer group min-w-0`}
+                className={`flex items-center gap-2 ${theme.hover} p-2 md:p-3 rounded-lg transition-colors cursor-pointer group`}
               >
-                {/* Nome categoria - Truncate long names */}
-                <span className={`mb-1.5 ${theme.text.secondary} text-sm font-medium group-hover:${theme.text.primary} transition-colors truncate w-full`}>
-                  {cat.name}
-                </span>
-
-                {/* Riga con barra e dettagli */}
-                <div className="flex items-center gap-2 w-full min-w-0">
-                  {/* Barra verticale compatta */}
-                  <div 
-                    className="w-1 h-6 sm:h-8 rounded-full group-hover:w-1.5 transition-all flex-shrink-0" 
-                    style={{ backgroundColor: cat.color }} 
-                  />
-
-                  {/* Dettagli */}
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className={`font-bold text-base sm:text-lg ${theme.text.primary}`}>{perc}%</span>
-                    <span className={`text-xs ${theme.text.muted} truncate`}>
+                <div 
+                  className="w-1 h-6 md:h-8 rounded-full flex-shrink-0 group-hover:w-1.5 transition-all" 
+                  style={{ backgroundColor: cat.color }} 
+                />
+                <div className="min-w-0 flex-1">
+                  <div className={`text-xs md:text-sm font-medium ${theme.text.secondary} truncate mb-0.5 group-hover:${theme.text.primary} transition-colors`}>
+                    {cat.name}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className={`font-semibold text-sm md:text-base ${theme.text.primary}`}>{perc}%</span>
+                    <span className={`text-xs ${theme.text.muted}`}>
                       {formatCurrency(cat.value).replace('.00', '')}
                     </span>
                   </div>
