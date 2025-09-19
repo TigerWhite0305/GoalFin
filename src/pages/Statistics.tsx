@@ -17,7 +17,6 @@ import TrendsLineChart from "../components/statistics/chart/TrendsLineChart";
 import MonthlyAreaChart from "../components/statistics/chart/MonthlyAreaChart";
 import SpendingHeatmap from "../components/statistics/chart/SpendingHeatmap";
 import GoalsProgressChart from "../components/statistics/chart/GoalsProgressChart";
-import ChartHoverExport from "../components/statistics/ChartHoverExport";
 
 // Interface corrette
 interface ExportConfig {
