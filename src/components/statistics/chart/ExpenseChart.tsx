@@ -2,6 +2,8 @@
 import React, { forwardRef } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingDown } from "lucide-react";
+import ChartHoverExport from "../ChartHoverExport";
+import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
 
 interface ChartData {
   name: string;
@@ -28,6 +30,18 @@ const ExpenseChart = forwardRef<HTMLDivElement, ExpenseChartProps>(({
   getTotalExpenses,
   customTooltip: CustomTooltip
 }, ref) => {
+  // ✅ Usa l'hook direttamente nel componente
+  const { quickExport, openExportModal } = useAdvancedCharts();
+
+  // ✅ Configura l'export per questo specifico grafico
+  const getExportConfig = () => ({
+    chartId: 'expense-chart',
+    chartName: 'Grafico Spese',
+    availableFormats: ['PNG', 'CSV', 'JSON', 'PDF'] as const,
+    data: data,
+    chartRef: ref as React.RefObject<HTMLElement>
+  });
+
   return (
     <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 p-6 rounded-3xl shadow-2xl border border-gray-700/50" ref={ref}>
       <div className="flex items-center justify-between mb-6">
@@ -40,6 +54,16 @@ const ExpenseChart = forwardRef<HTMLDivElement, ExpenseChartProps>(({
               Spese per Categoria
             </h3>
             <p className="text-gray-400 text-sm">Distribuzione mensile</p>
+          </div>
+          {/* ✅ Ora usa le funzioni dell'hook locale */}
+          <div>
+            <ChartHoverExport
+              chartId="expense-chart"
+              chartName="Grafico Spese"
+              availableFormats={['PNG', 'CSV', 'JSON', 'PDF']}
+              onQuickExport={(format) => quickExport('expense-chart', format)}
+              onAdvancedExport={() => openExportModal(getExportConfig())}
+            />
           </div>
         </div>
         <div className="text-right bg-gray-900/50 p-4 rounded-2xl border border-gray-600/30">

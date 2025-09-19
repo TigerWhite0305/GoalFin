@@ -2,6 +2,8 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, Wallet, Target } from "lucide-react";
+import ChartHoverExport from "../ChartHoverExport";
+import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
 
 interface PatrimonioData {
   month: string;
@@ -75,20 +77,33 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
   const crescitaTotale = latestData.totale - firstData.totale;
   const crescitaPercentuale = ((crescitaTotale / firstData.totale) * 100).toFixed(1);
   const progressoObiettivo = ((latestData.totale / latestData.obiettivo) * 100).toFixed(1);
+  const { quickExport, openExportModal } = useAdvancedCharts();
+  const getExportConfig = () => ({
+    chartId: 'area-chart',
+    chartName: 'Crescita Patrimonio',
+    availableFormats: ['PNG', 'CSV', 'JSON'] as const,
+    data: patrimonioData,
+    chartRef: undefined
+  });
 
   return (
     <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 p-6 rounded-3xl shadow-2xl border border-gray-700/50">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center">
-            <Wallet className="w-6 h-6 text-white" />
-          </div>
           <div>
             <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
               Crescita Patrimonio
             </h3>
             <p className="text-gray-400 text-sm">Evoluzione nel tempo</p>
           </div>
+          <ChartHoverExport
+            chartId="area-chart"
+            chartName="Crescita Patrimonio"
+            availableFormats={['PNG', 'CSV', 'JSON']}
+            onQuickExport={(format) => quickExport('area-chart', format)}
+            onAdvancedExport={() => openExportModal(getExportConfig())}
+            position="inline"
+          />
         </div>
         
         <div className="text-right bg-gray-900/50 p-4 rounded-2xl border border-gray-600/30">

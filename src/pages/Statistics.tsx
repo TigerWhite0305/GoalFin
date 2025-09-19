@@ -270,15 +270,6 @@ const Statistics: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6 w-full items-start">
               <div className="2xl:col-span-2 w-full relative">
-                {/* Hover Export per ExpenseChart */}
-                <ChartHoverExport
-                  chartId="expense-chart"
-                  chartName="Grafico Spese"
-                  availableFormats={['PNG', 'CSV', 'JSON', 'PDF']}
-                  onQuickExport={(format) => quickExport('expense-chart', format)}
-                  onAdvancedExport={() => openExportModal(getExportConfig('expense-chart', 'Grafico Spese'))}
-                />
-                
                 <ExpenseChart
                   ref={expenseChartRef}
                   data={expenseData}
@@ -291,15 +282,6 @@ const Statistics: React.FC = () => {
               </div>
               
               <div className="2xl:col-span-1 w-full relative">
-                {/* Hover Export per CategoryBreakdown */}
-                <ChartHoverExport
-                  chartId="category-breakdown"
-                  chartName="Dettaglio Categorie"
-                  availableFormats={['PNG', 'CSV', 'JSON']}
-                  onQuickExport={(format) => quickExport('category-breakdown', format)}
-                  onAdvancedExport={() => openExportModal(getExportConfig('category-breakdown', 'Dettaglio Categorie'))}
-                />
-                
                 <div ref={categoryRef}>
                   <CategoryBreakdown
                     data={expenseData}
@@ -319,15 +301,7 @@ const Statistics: React.FC = () => {
               <h2 className={`text-xl md:text-2xl font-bold ${theme.text.primary}`}>Trend e Crescita</h2>
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-start">
-              <div className="w-full relative">
-                <ChartHoverExport
-                  chartId="trends-chart"
-                  chartName="Trend Finanziario"
-                  availableFormats={['PNG', 'CSV', 'JSON']}
-                  onQuickExport={(format) => quickExport('trends-chart', format)}
-                  onAdvancedExport={() => openExportModal(getExportConfig('trends-chart', 'Trend Finanziario'))}
-                />
-                
+              <div className="w-full relative">        
                 <div ref={trendsChartRef}>
                   <TrendsLineChart
                     formatCurrency={formatCurrency}
@@ -337,14 +311,6 @@ const Statistics: React.FC = () => {
               </div>
               
               <div className="w-full relative">
-                <ChartHoverExport
-                  chartId="area-chart"
-                  chartName="Crescita Patrimonio"
-                  availableFormats={['PNG', 'CSV', 'JSON']}
-                  onQuickExport={(format) => quickExport('area-chart', format)}
-                  onAdvancedExport={() => openExportModal(getExportConfig('area-chart', 'Crescita Patrimonio'))}
-                />
-                
                 <div ref={areaChartRef}>
                   <MonthlyAreaChart
                     formatCurrency={formatCurrency}
@@ -362,14 +328,6 @@ const Statistics: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-start">
               <div className="w-full relative">
-                <ChartHoverExport
-                  chartId="heatmap-chart"
-                  chartName="Calendario Spese"
-                  availableFormats={['PNG', 'CSV', 'JSON']}
-                  onQuickExport={(format) => quickExport('heatmap-chart', format)}
-                  onAdvancedExport={() => openExportModal(getExportConfig('heatmap-chart', 'Calendario Spese'))}
-                />
-                
                 <div ref={heatmapRef}>
                   <SpendingHeatmap
                     formatCurrency={formatCurrency}
@@ -378,14 +336,6 @@ const Statistics: React.FC = () => {
               </div>
               
               <div className="w-full relative">
-                <ChartHoverExport
-                  chartId="goals-chart"
-                  chartName="Progresso Obiettivi"
-                  availableFormats={['PNG', 'CSV', 'JSON', 'PDF']}
-                  onQuickExport={(format) => quickExport('goals-chart', format)}
-                  onAdvancedExport={() => openExportModal(getExportConfig('goals-chart', 'Progresso Obiettivi'))}
-                />
-                
                 <div ref={goalsChartRef}>
                   <GoalsProgressChart
                     formatCurrency={formatCurrency}

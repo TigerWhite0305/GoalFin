@@ -1,6 +1,8 @@
 // src/components/statistics/chart/CategoryBreakdown.tsx
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { Activity, DollarSign } from "lucide-react";
+import ChartHoverExport from "../ChartHoverExport";
+import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
 
 interface ChartData {
   name: string;
@@ -17,23 +19,50 @@ interface CategoryBreakdownProps {
   selectedPeriod: string;
 }
 
-const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({
+// ✅ Aggiungi forwardRef per supportare il ref
+const CategoryBreakdown = forwardRef<HTMLDivElement, CategoryBreakdownProps>(({
   data,
   formatCurrency,
   getTotalExpenses,
   selectedPeriod
-}) => {
+}, ref) => {
+  // ✅ Usa l'hook direttamente nel componente
+  const { quickExport, openExportModal } = useAdvancedCharts();
+
+  // ✅ Configura l'export per questo specifico grafico
+  const getExportConfig = () => ({
+    chartId: 'category-breakdown',
+    chartName: 'Dettaglio Categorie',
+    availableFormats: ['PNG', 'CSV', 'JSON'] as const,
+    data: data,
+    chartRef: ref as React.RefObject<HTMLElement>
+  });
+
   return (
-    <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 p-6 rounded-3xl shadow-2xl border border-gray-700/50 h-full flex flex-col">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
-          <Activity className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-            Dettaglio Categorie
-          </h3>
-          <p className="text-gray-400 text-sm">Analisi per categoria</p>
+    <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 p-6 rounded-3xl shadow-2xl border border-gray-700/50 h-full flex flex-col" ref={ref}>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
+            <Activity className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-3">
+              <div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                  Dettaglio Categorie
+                </h3>
+                <p className="text-gray-400 text-sm">Analisi per categoria</p>
+              </div>
+              <ChartHoverExport
+                chartId="category-breakdown"
+                chartName="Dettaglio Categorie"
+                availableFormats={['PNG', 'CSV', 'JSON']}
+                onQuickExport={(format) => quickExport('category-breakdown', format)}
+                onAdvancedExport={() => openExportModal(getExportConfig())}
+                position="inline"
+              />
+            </div>
+          </div>
         </div>
       </div>
       
@@ -135,6 +164,9 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({
       </div>
     </div>
   );
-};
+});
+
+// ✅ Aggiungi displayName per debugging
+CategoryBreakdown.displayName = 'CategoryBreakdown';
 
 export default CategoryBreakdown;

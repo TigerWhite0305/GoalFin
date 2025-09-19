@@ -2,6 +2,8 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Target, Calendar, TrendingUp, Award, Clock } from "lucide-react";
+import ChartHoverExport from "../ChartHoverExport";
+import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
 
 interface Goal {
   id: string;
@@ -90,6 +92,15 @@ const GoalsProgressChart: React.FC<GoalsProgressChartProps> = ({ formatCurrency 
       displayName: goal.name.length > 12 ? goal.name.substring(0, 12) + '...' : goal.name
     };
   });
+  const { quickExport, openExportModal } = useAdvancedCharts();
+  const getExportConfig = () => ({
+    chartId: 'goals-chart',
+    chartName: 'Progresso Obiettivi',
+    availableFormats: ['PNG', 'CSV', 'JSON', 'PDF'] as const,
+    data: chartData,
+    chartRef: undefined // Aggiungi un ref se necessario
+  });
+
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -181,11 +192,25 @@ const GoalsProgressChart: React.FC<GoalsProgressChartProps> = ({ formatCurrency 
             <Award className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-              Progresso Obiettivi
-            </h3>
-            <p className="text-gray-400 text-sm">Stato avanzamento risparmi</p>
+            <div className="flex items-center gap-3">
+              <div>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                  Progresso Obiettivi
+                </h3>
+                <p className="text-gray-400 text-sm">Stato avanzamento risparmi</p>
+              </div>
+              <ChartHoverExport
+                chartId="goals-chart"
+                chartName="Progresso Obiettivi"
+                availableFormats={['PNG', 'CSV', 'JSON', 'PDF']}
+                onQuickExport={(format) => quickExport('goals-chart', format)}
+                onAdvancedExport={() => openExportModal(getExportConfig())}
+                position="inline"
+              />
+            </div>
           </div>
+
+          
         </div>
         
         <div className="text-right bg-gray-900/50 p-4 rounded-2xl border border-gray-600/30">

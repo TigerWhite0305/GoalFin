@@ -1,6 +1,8 @@
 // src/components/statistics/SpendingHeatmap.tsx
 import React, { useState } from 'react';
 import { Calendar, Activity, TrendingDown, DollarSign } from "lucide-react";
+import ChartHoverExport from "../ChartHoverExport";
+import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
 
 interface DayData {
   day: number;
@@ -68,6 +70,15 @@ const SpendingHeatmap: React.FC<SpendingHeatmapProps> = ({ formatCurrency }) => 
   const avgDaily = totalSpent / monthData.length;
   const maxDay = monthData.reduce((max, day) => day.amount > max.amount ? day : max);
   const totalTransactions = monthData.reduce((sum, day) => sum + day.transactions, 0);
+  const { quickExport, openExportModal } = useAdvancedCharts();
+
+  const getExportConfig = () => ({
+  chartId: 'heatmap-chart',
+  chartName: 'Calendario Spese',
+  availableFormats: ['PNG', 'CSV', 'JSON'] as const,
+  data: monthData,
+  chartRef: undefined
+});
 
   // Giorni della settimana
   const weekDays = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
@@ -76,16 +87,21 @@ const SpendingHeatmap: React.FC<SpendingHeatmapProps> = ({ formatCurrency }) => 
     <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 p-6 rounded-3xl shadow-2xl border border-gray-700/50 h-full">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center">
-            <Calendar className="w-6 h-6 text-white" />
+            <div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                Calendario Spese
+              </h3>
+              <p className="text-gray-400 text-sm">Heatmap giornaliera</p>
+            </div>
+            <ChartHoverExport
+              chartId="heatmap-chart"
+              chartName="Calendario Spese"
+              availableFormats={['PNG', 'CSV', 'JSON']}
+              onQuickExport={(format) => quickExport('heatmap-chart', format)}
+              onAdvancedExport={() => openExportModal(getExportConfig())}
+              position="inline"
+            />
           </div>
-          <div>
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-              Calendario Spese
-            </h3>
-            <p className="text-gray-400 text-sm">Heatmap giornaliera</p>
-          </div>
-        </div>
         
         <div className="text-right bg-gray-900/50 p-4 rounded-2xl border border-gray-600/30">
           <p className="text-gray-400 text-sm">Media giornaliera</p>

@@ -9,6 +9,8 @@ interface ChartHoverExportProps {
   onQuickExport: (format: string) => void;
   onAdvancedExport: () => void;
   className?: string;
+  // ✅ Nuova prop per controllare il posizionamento
+  position?: 'absolute' | 'inline';
 }
 
 const ChartHoverExport: React.FC<ChartHoverExportProps> = ({
@@ -17,7 +19,9 @@ const ChartHoverExport: React.FC<ChartHoverExportProps> = ({
   availableFormats,
   onQuickExport,
   onAdvancedExport,
-  className = ""
+  className = "",
+  // ✅ Default absolute per retrocompatibilità
+  position = 'absolute'
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -41,13 +45,12 @@ const ChartHoverExport: React.FC<ChartHoverExportProps> = ({
   };
 
   return (
-    <div className={`absolute top-4 right-4 ${className}`}>
+    <div className={className}>
       <div className="relative">
         {/* Main Export Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          onMouseEnter={() => setIsExpanded(true)}
-          className="w-10 h-10 rounded-xl bg-gray-800/80 backdrop-blur-sm border border-gray-600/30 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700/80 transition-all duration-200 shadow-lg"
+          className="w-10 h-10 rounded-xl bg-gray-800/60 backdrop-blur-sm border border-gray-600/30 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700/60 transition-all duration-200 shadow-lg"
           title={`Esporta ${chartName}`}
         >
           <Download className="w-4 h-4" />
@@ -56,8 +59,7 @@ const ChartHoverExport: React.FC<ChartHoverExportProps> = ({
         {/* Expanded Menu */}
         {isExpanded && (
           <div 
-            className="absolute top-12 right-0 bg-gray-800/95 backdrop-blur-sm border border-gray-600/50 rounded-2xl shadow-2xl p-2 min-w-[180px] z-50"
-            onMouseLeave={() => setIsExpanded(false)}
+            className={`absolute ${position === 'inline' ? 'top-12 left-0' : 'top-12 right-0'} bg-gray-800/95 backdrop-blur-sm border border-gray-600/50 rounded-2xl shadow-2xl p-2 min-w-[180px] z-50`}
           >
             <div className="text-xs text-gray-400 px-3 py-2 border-b border-gray-600/30 mb-2">
               Esporta {chartName}

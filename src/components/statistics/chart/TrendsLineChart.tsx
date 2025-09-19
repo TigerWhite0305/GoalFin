@@ -2,6 +2,8 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { TrendingUp, Calendar } from "lucide-react";
+import ChartHoverExport from "../ChartHoverExport";
+import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
 
 interface TrendData {
   month: string;
@@ -64,6 +66,15 @@ const TrendsLineChart: React.FC<TrendsLineChartProps> = ({
     return null;
   };
 
+  const { quickExport, openExportModal } = useAdvancedCharts();
+  const getExportConfig = () => ({
+    chartId: 'trends-chart',
+    chartName: 'Trend Finanziario',
+    availableFormats: ['PNG', 'CSV', 'JSON'] as const,
+    data: trendData,
+    chartRef: undefined
+  });
+
   // Calcola statistiche
   const latestData = trendData[trendData.length - 1];
   const previousData = trendData[trendData.length - 2];
@@ -74,15 +85,20 @@ const TrendsLineChart: React.FC<TrendsLineChartProps> = ({
     <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 p-6 rounded-3xl shadow-2xl border border-gray-700/50 h-full">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-white" />
-          </div>
           <div>
             <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
               Trend Finanziario
             </h3>
             <p className="text-gray-400 text-sm">Andamento entrate vs uscite</p>
           </div>
+          <ChartHoverExport
+            chartId="trends-chart"
+            chartName="Trend Finanziario"
+            availableFormats={['PNG', 'CSV', 'JSON']}
+            onQuickExport={(format) => quickExport('trends-chart', format)}
+            onAdvancedExport={() => openExportModal(getExportConfig())}
+            position="inline"
+          />
         </div>
         
         {/* Indicatore bilancio */}
