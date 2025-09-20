@@ -4,6 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, Wallet, Target } from "lucide-react";
 import ChartHoverExport from "../ChartHoverExport";
 import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
+import { useTheme } from "../../../context/ThemeContext";
 
 interface PatrimonioData {
   month: string;
@@ -18,6 +19,8 @@ interface MonthlyAreaChartProps {
 }
 
 const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) => {
+  const { isDarkMode } = useTheme();
+
   const patrimonioData: PatrimonioData[] = [
     { month: 'Gen', conti: 15000, investimenti: 12000, totale: 27000, obiettivo: 30000 },
     { month: 'Feb', conti: 15800, investimenti: 12400, totale: 28200, obiettivo: 30000 },
@@ -30,39 +33,88 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
     { month: 'Set', conti: 19580, investimenti: 15305, totale: 34885, obiettivo: 36000 },
   ];
 
+  // Theme-aware colors seguendo il design system
+  const getThemeColors = () => ({
+    background: {
+      card: isDarkMode ? '#161920' : '#F8FAFC',
+      secondary: isDarkMode ? '#1F2937' : '#F1F5F9',
+      accent: isDarkMode ? '#0A0B0F' : '#FEFEFE'
+    },
+    text: {
+      primary: isDarkMode ? '#F9FAFB' : '#0F172A',
+      secondary: isDarkMode ? '#D1D5DB' : '#334155',
+      muted: isDarkMode ? '#6B7280' : '#64748B',
+      subtle: isDarkMode ? '#9CA3AF' : '#64748B'
+    },
+    chart: {
+      grid: isDarkMode ? '#374151' : '#E2E8F0',
+      axis: isDarkMode ? '#9CA3AF' : '#64748B'
+    },
+    accent: {
+      primary: '#6366F1', // Indigo
+      secondary: '#10B981', // Emerald  
+      amber: '#F59E0B',
+      purple: '#8B5CF6',
+      blue: '#3B82F6',
+      success: '#059669',
+      error: '#DC2626',
+      info: '#0284C7'
+    }
+  });
+
+  const colors = getThemeColors();
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-gray-800/95 border border-gray-600/50 rounded-2xl p-5 shadow-2xl backdrop-blur-sm">
-          <p className="text-white font-bold mb-3 text-center border-b border-gray-600/30 pb-2">{label}</p>
+        <div className={`${isDarkMode ? 'bg-gray-800/95 border-gray-600/50' : 'bg-white/95 border-gray-200/50'} border rounded-xl p-4 shadow-2xl backdrop-blur-sm`}>
+          <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold mb-3 text-center border-b ${isDarkMode ? 'border-gray-600/30' : 'border-gray-200/30'} pb-2 text-sm md:text-base`}>
+            {label}
+          </p>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-blue-400" />
-                <span className="text-gray-300 text-sm">Conti</span>
+                <Wallet className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} text-xs md:text-sm`}>
+                  Conti
+                </span>
               </div>
-              <span className="font-bold text-blue-400">{formatCurrency(data.conti)}</span>
+              <span className={`font-bold text-xs md:text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                {formatCurrency(data.conti)}
+              </span>
             </div>
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-purple-400" />
-                <span className="text-gray-300 text-sm">Investimenti</span>
+                <TrendingUp className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} text-xs md:text-sm`}>
+                  Investimenti
+                </span>
               </div>
-              <span className="font-bold text-purple-400">{formatCurrency(data.investimenti)}</span>
+              <span className={`font-bold text-xs md:text-sm ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                {formatCurrency(data.investimenti)}
+              </span>
             </div>
-            <div className="border-t border-gray-600/30 pt-2">
+            <div className={`border-t ${isDarkMode ? 'border-gray-600/30' : 'border-gray-200/30'} pt-2`}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-emerald-400" />
-                  <span className="text-white font-medium">Totale</span>
+                  <Target className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                  <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium text-xs md:text-sm`}>
+                    Totale
+                  </span>
                 </div>
-                <span className="font-bold text-emerald-400 text-lg">{formatCurrency(data.totale)}</span>
+                <span className={`font-bold text-sm md:text-lg ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                  {formatCurrency(data.totale)}
+                </span>
               </div>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <span className="text-gray-400 text-xs">Obiettivo</span>
-              <span className="text-gray-300 text-sm">{formatCurrency(data.obiettivo)}</span>
+              <span className={`${colors.text.muted} text-xs`}>
+                Obiettivo
+              </span>
+              <span className={`${colors.text.secondary} text-xs md:text-sm`}>
+                {formatCurrency(data.obiettivo)}
+              </span>
             </div>
           </div>
         </div>
@@ -77,6 +129,7 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
   const crescitaTotale = latestData.totale - firstData.totale;
   const crescitaPercentuale = ((crescitaTotale / firstData.totale) * 100).toFixed(1);
   const progressoObiettivo = ((latestData.totale / latestData.obiettivo) * 100).toFixed(1);
+  
   const { quickExport, openExportModal } = useAdvancedCharts();
   const getExportConfig = () => ({
     chartId: 'area-chart',
@@ -87,15 +140,24 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
   });
 
   return (
-    <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 p-6 rounded-3xl shadow-2xl border border-gray-700/50">
-      <div className="flex items-center justify-between mb-6">
+    <div className={`${isDarkMode ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900' : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'} p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-xl ${isDarkMode ? 'border border-gray-700/50' : 'border border-slate-200/50'} transition-all duration-300`}>
+      
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-4">
         <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-purple-500/20 border border-purple-500/30' : 'bg-purple-50 border border-purple-200'}`}>
+            <TrendingUp className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+          </div>
           <div>
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            <h3 className={`text-xl md:text-2xl font-bold ${isDarkMode ? 'bg-gradient-to-r from-purple-400 via-indigo-500 to-teal-400 bg-clip-text text-transparent' : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 bg-clip-text text-transparent'}`}>
               Crescita Patrimonio
             </h3>
-            <p className="text-gray-400 text-sm">Evoluzione nel tempo</p>
+            <p className={`${colors.text.muted} text-xs md:text-sm`}>
+              Evoluzione nel tempo
+            </p>
           </div>
+          
+          {/* Export Button - Sempre visibile */}
           <ChartHoverExport
             chartId="area-chart"
             chartName="Crescita Patrimonio"
@@ -106,45 +168,56 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
           />
         </div>
         
-        <div className="text-right bg-gray-900/50 p-4 rounded-2xl border border-gray-600/30">
-          <p className="text-gray-400 text-sm">Patrimonio totale</p>
-          <p className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+        {/* Indicatore patrimonio */}
+        <div className={`text-center md:text-right ${isDarkMode ? 'bg-gray-900/50 border border-gray-600/30' : 'bg-white/50 border border-slate-200/50'} p-3 md:p-4 rounded-xl md:rounded-2xl backdrop-blur-sm`}>
+          <p className={`${colors.text.muted} text-xs`}>
+            Patrimonio totale
+          </p>
+          <p className={`text-lg md:text-2xl font-bold ${isDarkMode ? 'bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent' : 'bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent'}`}>
             {formatCurrency(latestData.totale)}
           </p>
-          <p className="text-emerald-300 text-sm">+{formatCurrency(crescitaTotale)} (+{crescitaPercentuale}%)</p>
+          <p className={`text-xs ${isDarkMode ? 'text-emerald-300' : 'text-emerald-600'}`}>
+            +{formatCurrency(crescitaTotale)} (+{crescitaPercentuale}%)
+          </p>
         </div>
       </div>
 
-      <div className="relative bg-gray-900/30 rounded-2xl p-6 border border-gray-600/20">
-        <ResponsiveContainer width="100%" height={400}>
-          <AreaChart data={patrimonioData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+      {/* Chart Container */}
+      <div className={`relative ${isDarkMode ? 'bg-gray-900/30 border border-gray-600/20' : 'bg-white/30 border border-slate-200/20'} rounded-xl md:rounded-2xl p-3 md:p-6 backdrop-blur-sm`}>
+        <ResponsiveContainer width="100%" height={320}>
+          <AreaChart data={patrimonioData} margin={{ top: 20, right: 15, left: 5, bottom: 5 }}>
             <defs>
               <linearGradient id="contiAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                <stop offset="5%" stopColor={colors.accent.blue} stopOpacity={0.8}/>
+                <stop offset="95%" stopColor={colors.accent.blue} stopOpacity={0.1}/>
               </linearGradient>
               <linearGradient id="investimentiAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
+                <stop offset="5%" stopColor={colors.accent.purple} stopOpacity={0.8}/>
+                <stop offset="95%" stopColor={colors.accent.purple} stopOpacity={0.1}/>
               </linearGradient>
               <linearGradient id="totaleAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10B981" stopOpacity={0.6}/>
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0.05}/>
+                <stop offset="5%" stopColor={colors.accent.secondary} stopOpacity={0.6}/>
+                <stop offset="95%" stopColor={colors.accent.secondary} stopOpacity={0.05}/>
               </linearGradient>
             </defs>
             
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              stroke={colors.chart.grid} 
+              opacity={0.3} 
+            />
             <XAxis 
               dataKey="month" 
-              stroke="#9CA3AF" 
-              fontSize={12}
-              tick={{ fill: '#9CA3AF' }}
+              stroke={colors.chart.axis}
+              fontSize={11}
+              tick={{ fill: colors.chart.axis, fontSize: 11 }}
             />
             <YAxis 
-              stroke="#9CA3AF" 
-              fontSize={12}
-              tick={{ fill: '#9CA3AF' }}
+              stroke={colors.chart.axis}
+              fontSize={11}
+              tick={{ fill: colors.chart.axis, fontSize: 11 }}
               domain={['dataMin - 1000', 'dataMax + 2000']}
+              tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
             />
             <Tooltip content={<CustomTooltip />} />
             
@@ -152,7 +225,7 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
               type="monotone"
               dataKey="conti"
               stackId="1"
-              stroke="#3B82F6"
+              stroke={colors.accent.blue}
               strokeWidth={2}
               fill="url(#contiAreaGradient)"
               name="Conti"
@@ -161,7 +234,7 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
               type="monotone"
               dataKey="investimenti"
               stackId="1"
-              stroke="#8B5CF6"
+              stroke={colors.accent.purple}
               strokeWidth={2}
               fill="url(#investimentiAreaGradient)"
               name="Investimenti"
@@ -171,7 +244,7 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
             <Area
               type="monotone"
               dataKey="obiettivo"
-              stroke="#F59E0B"
+              stroke={colors.accent.amber}
               strokeWidth={2}
               strokeDasharray="8 4"
               fill="none"
@@ -181,43 +254,53 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
         </ResponsiveContainer>
         
         {/* Legenda */}
-        <div className="flex justify-center mt-4 gap-6">
+        <div className="flex justify-center mt-3 md:mt-4 gap-3 md:gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded shadow-lg"></div>
-            <span className="text-blue-300 text-sm font-medium">Conti Correnti</span>
+            <div className={`w-3 h-2 md:w-4 md:h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded shadow-sm`}></div>
+            <span className={`${isDarkMode ? 'text-blue-300' : 'text-blue-600'} text-xs md:text-sm font-medium`}>
+              Conti Correnti
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded shadow-lg"></div>
-            <span className="text-purple-300 text-sm font-medium">Investimenti</span>
+            <div className={`w-3 h-2 md:w-4 md:h-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded shadow-sm`}></div>
+            <span className={`${isDarkMode ? 'text-purple-300' : 'text-purple-600'} text-xs md:text-sm font-medium`}>
+              Investimenti
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-yellow-500 rounded" style={{ clipPath: 'polygon(0 0, 80% 0, 100% 100%, 20% 100%)' }}></div>
-            <span className="text-yellow-300 text-sm font-medium">Obiettivo</span>
+            <div className={`w-4 h-1 md:w-5 md:h-1 bg-amber-500 rounded`} style={{ clipPath: 'polygon(0 0, 80% 0, 100% 100%, 20% 100%)' }}></div>
+            <span className={`${isDarkMode ? 'text-amber-300' : 'text-amber-600'} text-xs md:text-sm font-medium`}>
+              Obiettivo
+            </span>
           </div>
         </div>
       </div>
 
       {/* Progress bar verso obiettivo */}
-      <div className="mt-6 bg-gray-900/60 rounded-2xl p-4 border border-gray-600/30">
+      <div className={`mt-4 md:mt-6 ${isDarkMode ? 'bg-gray-900/60 border border-gray-600/30' : 'bg-white/60 border border-slate-200/30'} rounded-xl md:rounded-2xl p-3 md:p-4 backdrop-blur-sm`}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-yellow-400" />
-            <span className="text-white font-medium">Progresso verso obiettivo</span>
+            <Target className={`w-4 h-4 md:w-5 md:h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+            <span className={`${colors.text.primary} font-medium text-sm md:text-base`}>
+              Progresso verso obiettivo
+            </span>
           </div>
-          <span className="text-yellow-400 font-bold">{progressoObiettivo}%</span>
+          <span className={`${isDarkMode ? 'text-amber-400' : 'text-amber-600'} font-bold text-sm md:text-base`}>
+            {progressoObiettivo}%
+          </span>
         </div>
         
-        <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+        <div className={`h-2 md:h-3 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200/50'} rounded-full overflow-hidden`}>
           <div 
-            className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full transition-all duration-1000 ease-out shadow-lg"
+            className={`h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-1000 ease-out shadow-sm ${isDarkMode ? 'shadow-amber-500/20' : 'shadow-amber-500/30'}`}
             style={{ 
               width: `${Math.min(parseFloat(progressoObiettivo), 100)}%`,
-              boxShadow: '0 0 20px rgba(245, 158, 11, 0.5)'
+              boxShadow: isDarkMode ? '0 0 20px rgba(245, 158, 11, 0.3)' : '0 0 15px rgba(245, 158, 11, 0.2)'
             }}
           ></div>
         </div>
         
-        <div className="flex justify-between text-xs text-gray-400 mt-2">
+        <div className={`flex justify-between text-xs ${colors.text.muted} mt-2`}>
           <span>{formatCurrency(latestData.totale)}</span>
           <span>{formatCurrency(latestData.obiettivo)}</span>
         </div>

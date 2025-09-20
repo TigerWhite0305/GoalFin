@@ -143,32 +143,32 @@ const GranularExportSystem: React.FC<GranularExportSystemProps> = ({
       <div className={`${theme.background.modal} border ${theme.border} rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden`}>
         
         {/* Header */}
-        <div className={`relative bg-gradient-to-r ${theme.background.gradient} p-4`}>
+        <div className={`relative bg-gradient-to-r ${theme.background.gradient} p-3`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                <Download className="w-4 h-4 text-white" />
+              <div className="w-6 h-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Download className="w-3 h-3 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Esporta Grafico</h3>
+                <h3 className="text-base font-medium text-white">Esporta Grafico</h3>
                 <p className="text-white/80 text-xs">{exportConfig.chartName}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-white/20 rounded-lg text-white/80 hover:text-white transition-all duration-200"
+              className="p-1 hover:bg-white/20 rounded-lg text-white/80 hover:text-white transition-all duration-200"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3 h-3" />
             </button>
           </div>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-3 space-y-3">
           
           {/* Format Selection */}
           <div>
-            <label className={`block text-sm font-medium mb-2 ${theme.text.secondary}`}>Formato di Export</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <label className={`block text-xs font-medium mb-1 ${theme.text.secondary}`}>Formato</label>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-1">
               {exportConfig.availableFormats.map((format) => (
                 <button
                   key={format}
@@ -176,193 +176,164 @@ const GranularExportSystem: React.FC<GranularExportSystemProps> = ({
                     setSelectedFormat(format);
                     updateOption('format', format);
                   }}
-                  className={`p-3 rounded-xl transition-all duration-200 border text-xs ${
+                  className={`p-2 rounded-lg transition-all duration-200 border text-xs ${
                     selectedFormat === format
                       ? theme.accent.selected
-                      : `${theme.background.card} ${theme.border} ${theme.text.secondary} ${theme.accent.hover} hover:border-gray-500/50`
+                      : `${theme.background.card} ${theme.border} ${theme.text.secondary} ${theme.accent.hover}`
                   }`}
                 >
                   <div className="flex flex-col items-center gap-1">
                     {getFormatIcon(format)}
-                    <span className="font-medium">{format}</span>
+                    <span className="font-medium text-xs">{format}</span>
                   </div>
                 </button>
               ))}
             </div>
-            <p className={`${theme.text.muted} text-xs mt-1`}>{getFormatDescription(selectedFormat)}</p>
           </div>
 
           {/* File Name */}
           <div>
-            <label className={`block text-sm font-medium mb-2 ${theme.text.secondary}`}>Nome File</label>
+            <label className={`block text-xs font-medium mb-1 ${theme.text.secondary}`}>Nome File</label>
             <input
               type="text"
               value={options.fileName}
               onChange={(e) => updateOption('fileName', e.target.value)}
-              className={`w-full p-2 rounded-xl ${theme.background.input} border ${theme.border} ${theme.text.primary} placeholder-gray-400 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 text-sm`}
+              className={`w-full p-1.5 rounded-lg ${theme.background.input} border ${theme.border} ${theme.text.primary} text-xs`}
               placeholder="nome_file"
             />
           </div>
 
-          {/* Image-specific options */}
-          {isImageFormat && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${theme.text.secondary}`}>Qualità</label>
-                <select
-                  value={options.quality}
-                  onChange={(e) => updateOption('quality', e.target.value)}
-                  className={`w-full p-2 rounded-xl ${theme.background.input} border ${theme.border} ${theme.text.primary} text-sm`}
-                >
-                  <option value="low">Bassa (veloce)</option>
-                  <option value="medium">Media (bilanciata)</option>
-                  <option value="high">Alta (migliore)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${theme.text.secondary}`}>Sfondo</label>
-                <select
-                  value={options.backgroundColor}
-                  onChange={(e) => updateOption('backgroundColor', e.target.value)}
-                  className={`w-full p-2 rounded-xl ${theme.background.input} border ${theme.border} ${theme.text.primary} text-sm`}
-                >
-                  <option value="transparent">Trasparente</option>
-                  <option value="white">Bianco</option>
-                  <option value="dark">Scuro</option>
-                </select>
-              </div>
+          {/* Conditional Options in one row */}
+          {(isImageFormat || isDataFormat) && (
+            <div className="grid grid-cols-2 gap-2">
+              {isImageFormat && (
+                <>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.text.secondary}`}>Qualità</label>
+                    <select
+                      value={options.quality}
+                      onChange={(e) => updateOption('quality', e.target.value)}
+                      className={`w-full p-1.5 rounded-lg ${theme.background.input} border ${theme.border} ${theme.text.primary} text-xs`}
+                    >
+                      <option value="low">Bassa</option>
+                      <option value="medium">Media</option>
+                      <option value="high">Alta</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.text.secondary}`}>Sfondo</label>
+                    <select
+                      value={options.backgroundColor}
+                      onChange={(e) => updateOption('backgroundColor', e.target.value)}
+                      className={`w-full p-1.5 rounded-lg ${theme.background.input} border ${theme.border} ${theme.text.primary} text-xs`}
+                    >
+                      <option value="transparent">Trasparente</option>
+                      <option value="white">Bianco</option>
+                      <option value="dark">Scuro</option>
+                    </select>
+                  </div>
+                </>
+              )}
+              
+              {isDataFormat && (
+                <>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${theme.text.secondary}`}>Dati</label>
+                    <select
+                      value={options.dataRange}
+                      onChange={(e) => updateOption('dataRange', e.target.value)}
+                      className={`w-full p-1.5 rounded-lg ${theme.background.input} border ${theme.border} ${theme.text.primary} text-xs`}
+                    >
+                      <option value="visible">Visibili</option>
+                      <option value="filtered">Filtrati</option>
+                      <option value="all">Tutti</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={options.compression}
+                        onChange={(e) => updateOption('compression', e.target.checked)}
+                        className="w-3 h-3 rounded"
+                      />
+                      <span className={`${theme.text.secondary} text-xs`}>Comprimi</span>
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          {/* Data-specific options */}
-          {isDataFormat && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${theme.text.secondary}`}>Dati da Includere</label>
-                <select
-                  value={options.dataRange}
-                  onChange={(e) => updateOption('dataRange', e.target.value)}
-                  className={`w-full p-2 rounded-xl ${theme.background.input} border ${theme.border} ${theme.text.primary} text-sm`}
-                >
-                  <option value="visible">Solo dati visibili</option>
-                  <option value="filtered">Dati filtrati</option>
-                  <option value="all">Tutti i dati</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 pt-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={options.compression}
-                    onChange={(e) => updateOption('compression', e.target.checked)}
-                    className="w-3 h-3 rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className={`${theme.text.secondary} text-xs`}>Comprimi file</span>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Common Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
+          {/* Common Options - Single row */}
+          <div className="flex gap-4">
+            <label className="flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={options.includeHeader}
                 onChange={(e) => updateOption('includeHeader', e.target.checked)}
-                className="w-3 h-3 rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500"
+                className="w-3 h-3 rounded"
               />
-              <span className={`${theme.text.secondary} text-xs`}>Includi intestazione</span>
+              <span className={`${theme.text.secondary} text-xs`}>Intestazione</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={options.includeTimestamp}
                 onChange={(e) => updateOption('includeTimestamp', e.target.checked)}
-                className="w-3 h-3 rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500"
+                className="w-3 h-3 rounded"
               />
-              <span className={`${theme.text.secondary} text-xs`}>Aggiungi timestamp</span>
+              <span className={`${theme.text.secondary} text-xs`}>Timestamp</span>
             </label>
           </div>
 
-          {/* Preview Info */}
-          <div className={`${theme.background.card} rounded-xl p-3 border ${theme.border}`}>
-            <h4 className={`${theme.text.primary} font-medium mb-2 flex items-center gap-2 text-sm`}>
-              <Settings className="w-3 h-3" />
-              Anteprima Export
-            </h4>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className={theme.text.muted}>Formato:</span>
-                <span className={`${theme.text.primary} ml-2`}>{selectedFormat}</span>
-              </div>
-              <div>
-                <span className={theme.text.muted}>Qualità:</span>
-                <span className={`${theme.text.primary} ml-2`}>{options.quality}</span>
-              </div>
-              <div>
-                <span className={theme.text.muted}>Nome file:</span>
-                <span className={`${theme.text.primary} ml-2`}>{options.fileName}.{selectedFormat.toLowerCase()}</span>
-              </div>
-              <div>
-                <span className={theme.text.muted}>Dimensione stimata:</span>
-                <span className={`${theme.text.primary} ml-2`}>~2.5 MB</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Export Buttons */}
-          <div className={`border-t ${theme.border} pt-3`}>
-            <h4 className={`${theme.text.primary} font-medium mb-2 text-sm`}>Export Rapido</h4>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onExport('PNG', { ...options, format: 'PNG', quality: 'high' })}
-                className="px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs transition flex items-center gap-1"
-              >
-                <Image className="w-3 h-3" />
-                PNG HD
-              </button>
-              <button
-                onClick={() => onExport('CSV', { ...options, format: 'CSV' })}
-                className="px-2 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs transition flex items-center gap-1"
-              >
-                <FileText className="w-3 h-3" />
-                CSV Dati
-              </button>
-              <button
-                onClick={() => onExport('PDF', { ...options, format: 'PDF' })}
-                className="px-2 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs transition flex items-center gap-1"
-              >
-                <Printer className="w-3 h-3" />
-                PDF Print
-              </button>
-            </div>
+          {/* Quick Export - Single row */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => onExport('PNG', { ...options, format: 'PNG', quality: 'high' })}
+              className="px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs transition flex items-center gap-1"
+            >
+              <Image className="w-3 h-3" />
+              PNG
+            </button>
+            <button
+              onClick={() => onExport('CSV', { ...options, format: 'CSV' })}
+              className="px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs transition flex items-center gap-1"
+            >
+              <FileText className="w-3 h-3" />
+              CSV
+            </button>
+            <button
+              onClick={() => onExport('PDF', { ...options, format: 'PDF' })}
+              className="px-2 py-1 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs transition flex items-center gap-1"
+            >
+              <Printer className="w-3 h-3" />
+              PDF
+            </button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-between p-4 border-t ${theme.border} ${theme.background.card}`}>
-          <div className={`flex items-center gap-2 ${theme.text.muted} text-xs`}>
+        <div className={`flex items-center justify-between p-3 border-t ${theme.border} ${theme.background.card}`}>
+          <div className={`flex items-center gap-1 ${theme.text.muted} text-xs`}>
             <Share2 className="w-3 h-3" />
-            <span>L'export includerà solo i dati del grafico selezionato</span>
+            <span>Solo dati grafico selezionato</span>
           </div>
           
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className={`px-3 py-2 rounded-xl ${theme.background.card} border ${theme.border} ${theme.text.secondary} ${theme.accent.hover} transition-all text-xs`}
+              className={`px-3 py-1.5 rounded-lg ${theme.background.card} border ${theme.border} ${theme.text.secondary} ${theme.accent.hover} transition-all text-xs`}
             >
               Annulla
             </button>
             <button
               onClick={handleExport}
-              className={`px-4 py-2 rounded-xl bg-gradient-to-r ${theme.background.gradient} text-white hover:from-indigo-600 hover:via-purple-600 hover:to-teal-500 transition-all shadow-md flex items-center gap-2 text-xs`}
+              className={`px-3 py-1.5 rounded-lg bg-gradient-to-r ${theme.background.gradient} text-white hover:from-indigo-600 hover:via-purple-600 hover:to-teal-500 transition-all text-xs flex items-center gap-1`}
             >
               <Download className="w-3 h-3" />
-              Esporta {selectedFormat}
+              Esporta
             </button>
           </div>
         </div>
