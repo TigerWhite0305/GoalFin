@@ -258,7 +258,7 @@ const Statistics: React.FC = () => {
           />
         </div>
 
-        {/* Charts Grid Layout con Export Hover */}
+        {/* Charts Grid Layout con Height Alignment */}
         <div className="space-y-12">
           
           {/* Sezione 1: Grafici Principali Spese */}
@@ -267,21 +267,22 @@ const Statistics: React.FC = () => {
               <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-pink-500 rounded-full"></div>
               <h2 className={`text-xl md:text-2xl font-bold ${theme.text.primary}`}>Analisi Spese</h2>
             </div>
-            <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6 w-full items-start">
-              <div className="2xl:col-span-2 w-full relative">
-                <ExpenseChart
-                  ref={expenseChartRef}
-                  data={expenseData}
-                  chartType={filters.expenseChartType}
-                  onChartTypeChange={(type) => updateFilters({ expenseChartType: type })}
-                  formatCurrency={formatCurrency}
-                  getTotalExpenses={getTotalExpenses}
-                  customTooltip={CustomTooltip}
-                />
+            <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6 w-full items-stretch min-h-[500px]">
+              <div className="2xl:col-span-2 w-full h-full flex">
+                <div className="w-full" ref={expenseChartRef}>
+                  <ExpenseChart
+                    data={expenseData}
+                    chartType={filters.expenseChartType}
+                    onChartTypeChange={(type) => updateFilters({ expenseChartType: type })}
+                    formatCurrency={formatCurrency}
+                    getTotalExpenses={getTotalExpenses}
+                    customTooltip={CustomTooltip}
+                  />
+                </div>
               </div>
               
-              <div className="2xl:col-span-1 w-full relative">
-                <div ref={categoryRef}>
+              <div className="2xl:col-span-1 w-full h-full flex">
+                <div className="w-full" ref={categoryRef}>
                   <CategoryBreakdown
                     data={expenseData}
                     formatCurrency={formatCurrency}
@@ -299,9 +300,9 @@ const Statistics: React.FC = () => {
               <div className="w-1 h-8 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full"></div>
               <h2 className={`text-xl md:text-2xl font-bold ${theme.text.primary}`}>Trend e Crescita</h2>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-start">
-              <div className="w-full relative">        
-                <div ref={trendsChartRef}>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-stretch min-h-[600px]">
+              <div className="w-full h-full flex">        
+                <div className="w-full" ref={trendsChartRef}>
                   <TrendsLineChart
                     formatCurrency={formatCurrency}
                     selectedPeriod={filters.globalPeriod}
@@ -309,8 +310,8 @@ const Statistics: React.FC = () => {
                 </div>
               </div>
               
-              <div className="w-full relative">
-                <div ref={areaChartRef}>
+              <div className="w-full h-full flex">
+                <div className="w-full" ref={areaChartRef}>
                   <MonthlyAreaChart
                     formatCurrency={formatCurrency}
                   />
@@ -325,17 +326,17 @@ const Statistics: React.FC = () => {
               <div className="w-1 h-8 bg-gradient-to-b from-purple-500 to-indigo-500 rounded-full"></div>
               <h2 className={`text-xl md:text-2xl font-bold ${theme.text.primary}`}>Analisi Avanzate</h2>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-start">
-              <div className="w-full relative">
-                <div ref={heatmapRef}>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full items-stretch min-h-[700px]">
+              <div className="w-full h-full flex">
+                <div className="w-full" ref={heatmapRef}>
                   <SpendingHeatmap
                     formatCurrency={formatCurrency}
                   />
                 </div>
               </div>
               
-              <div className="w-full relative">
-                <div ref={goalsChartRef}>
+              <div className="w-full h-full flex">
+                <div className="w-full" ref={goalsChartRef}>
                   <GoalsProgressChart
                     formatCurrency={formatCurrency}
                   />
