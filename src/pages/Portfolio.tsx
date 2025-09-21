@@ -1,24 +1,26 @@
 import React, { useState } from "react";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { Wallet, CreditCard, PiggyBank, TrendingUp, TrendingDown, Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, History, DollarSign, Building, Landmark, MoreVertical, Edit, Trash2, ArrowLeftRight } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import AccountModal, { Account } from "../components/ui/AccountModal";
 import TransferModal from "../components/ui/TransferModal";
 import BalanceAdjustModal from "../components/ui/BalanceAdjustModal";
 
 const Portfolio: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const { addToast } = useToast();
+
+  // States
   const [showBalance, setShowBalance] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'1M' | '3M' | '6M' | '1Y'>('6M');
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isBalanceAdjustModalOpen, setIsBalanceAdjustModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
   const [adjustingAccount, setAdjustingAccount] = useState<Account | undefined>();
-  
-  const { addToast } = useToast();
 
-  // Stato per i conti
+  // Accounts data with GoalFin colors
   const [accounts, setAccounts] = useState<Account[]>([
     { 
       id: 1, 
@@ -27,7 +29,7 @@ const Portfolio: React.FC = () => {
       bank: "UniCredit", 
       balance: 3250.80, 
       currency: "EUR", 
-      color: "#4C6FFF",
+      color: "#6366F1", // Indigo
       icon: Landmark,
       lastTransaction: "2025-09-15T14:30:00"
     },
@@ -38,7 +40,7 @@ const Portfolio: React.FC = () => {
       bank: "Intesa Sanpaolo", 
       balance: 8750.00, 
       currency: "EUR", 
-      color: "#10B981",
+      color: "#10B981", // Emerald
       icon: PiggyBank,
       lastTransaction: "2025-09-12T09:15:00"
     },
@@ -49,7 +51,7 @@ const Portfolio: React.FC = () => {
       bank: "PostePay", 
       balance: 450.25, 
       currency: "EUR", 
-      color: "#F59E0B",
+      color: "#F59E0B", // Amber
       icon: CreditCard,
       lastTransaction: "2025-09-16T18:20:00"
     },
@@ -60,11 +62,74 @@ const Portfolio: React.FC = () => {
       bank: "BPER", 
       balance: 5680.40, 
       currency: "EUR", 
-      color: "#8B5CF6",
+      color: "#8B5CF6", // Purple
       icon: Building,
       lastTransaction: "2025-09-14T11:45:00"
     },
   ]);
+
+  // Theme colors matching Transactions page style
+  const getThemeColors = () => {
+    if (isDarkMode) {
+      return {
+        // 🌙 Dark Theme - matching Transactions page
+        background: {
+          primary: "bg-gray-900",
+          card: "bg-gray-800",
+          cardHover: "hover:bg-gray-700",
+          secondary: "bg-gray-700",
+          glass: "bg-gray-800/60 backdrop-blur-sm"
+        },
+        text: {
+          primary: "text-gray-50",
+          secondary: "text-gray-300",
+          muted: "text-gray-400",
+          subtle: "text-gray-500"
+        },
+        border: {
+          main: "border-gray-700",
+          card: "border-gray-700",
+          cardHover: "hover:border-gray-600"
+        },
+        accent: {
+          primary: "#6366F1", // Indigo
+          secondary: "#10B981", // Emerald
+          amber: "#F59E0B",
+          gradient: "from-indigo-500 via-purple-500 to-teal-400"
+        }
+      };
+    } else {
+      return {
+        // ☀️ Light Theme
+        background: {
+          primary: "bg-white",
+          card: "bg-white",
+          cardHover: "hover:bg-gray-50",
+          secondary: "bg-gray-100",
+          glass: "bg-white/60 backdrop-blur-sm"
+        },
+        text: {
+          primary: "text-gray-900",
+          secondary: "text-gray-700",
+          muted: "text-gray-600",
+          subtle: "text-gray-500"
+        },
+        border: {
+          main: "border-gray-200",
+          card: "border-gray-200",
+          cardHover: "hover:border-gray-300"
+        },
+        accent: {
+          primary: "#6366F1",
+          secondary: "#10B981",
+          amber: "#F59E0B",
+          gradient: "from-indigo-500 via-purple-500 to-teal-400"
+        }
+      };
+    }
+  };
+
+  const theme = getThemeColors();
 
   // Handler functions
   const handleAddAccount = () => {
@@ -87,9 +152,8 @@ const Portfolio: React.FC = () => {
 
   const handleSaveAccount = (accountData: any) => {
     if (editingAccount) {
-      // UPDATE esistente
       const accountTypes = {
-        checking: { icon: Landmark, color: "#4C6FFF" },
+        checking: { icon: Landmark, color: "#6366F1" },
         savings: { icon: PiggyBank, color: "#10B981" },
         prepaid: { icon: CreditCard, color: "#F59E0B" },
         business: { icon: Building, color: "#8B5CF6" },
@@ -112,9 +176,8 @@ const Portfolio: React.FC = () => {
       ));
       addToast(`Conto "${accountData.name}" modificato con successo`, 'success');
     } else {
-      // CREATE nuovo
       const accountTypes = {
-        checking: { icon: Landmark, color: "#4C6FFF" },
+        checking: { icon: Landmark, color: "#6366F1" },
         savings: { icon: PiggyBank, color: "#10B981" },
         prepaid: { icon: CreditCard, color: "#F59E0B" },
         business: { icon: Building, color: "#8B5CF6" },
@@ -186,7 +249,7 @@ const Portfolio: React.FC = () => {
     setAdjustingAccount(undefined);
   };
 
-  // Storico disponibilità (ultimi 6 mesi)
+  // Mock balance history data
   const balanceHistory = [
     { month: 'Apr', total: 16800, checking: 2800, savings: 8200, prepaid: 300, business: 5500 },
     { month: 'Mag', total: 17200, checking: 3100, savings: 8300, prepaid: 350, business: 5450 },
@@ -228,10 +291,10 @@ const Portfolio: React.FC = () => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-gray-800/95 border border-gray-600 rounded-xl p-3 shadow-xl">
-          <p className="text-gray-300 text-sm mb-2">{label}</p>
+        <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-3 shadow-xl backdrop-blur-sm`}>
+          <p className={`${theme.text.muted} text-sm mb-2`}>{label}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-white font-medium" style={{ color: entry.color }}>
+            <p key={index} className={`${theme.text.primary} font-medium`} style={{ color: entry.color }}>
               {`${entry.dataKey}: ${formatCurrency(entry.value)}`}
             </p>
           ))}
@@ -241,7 +304,7 @@ const Portfolio: React.FC = () => {
     return null;
   };
 
-  // Dati per il grafico a torta
+  // Chart data
   const accountsChartData = accounts.map(account => ({
     name: account.name,
     value: account.balance,
@@ -249,255 +312,288 @@ const Portfolio: React.FC = () => {
   }));
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 lg:p-6 space-y-6">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Il Mio Portafoglio
-          </h1>
-          <p className="text-gray-400 mt-1 text-sm sm:text-base">Panoramica completa dei tuoi conti e disponibilità</p>
-        </div>
+    <div className={`min-h-screen ${theme.background.primary} ${theme.text.primary} transition-colors duration-300`}>
+      {/* Container with full width */}
+      <div className="w-full h-full p-4 md:p-6 space-y-6">
         
-        <div className="flex gap-2">
-          {['1M', '3M', '6M', '1Y'].map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedPeriod(period as any)}
-              className={`px-3 py-2 rounded-lg text-sm transition ${
-                selectedPeriod === period ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {period}
-            </button>
-          ))}
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-2">
+            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-teal-400 bg-clip-text text-transparent leading-tight">
+              Il Mio Portafoglio
+            </h1>
+            <p className={`${theme.text.muted} text-sm leading-relaxed`}>
+              Panoramica completa dei tuoi conti e disponibilità
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Saldo Totale */}
-      <div className="bg-gradient-to-br from-blue-600 to-purple-700 p-6 sm:p-8 rounded-2xl shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Wallet className="w-8 h-8 text-blue-200" />
-            <h2 className="text-xl sm:text-2xl font-bold text-white">Saldo Totale</h2>
-          </div>
-          <button
-            onClick={() => setShowBalance(!showBalance)}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            {showBalance ? <Eye className="w-6 h-6 text-blue-200" /> : <EyeOff className="w-6 h-6 text-blue-200" />}
-          </button>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">
-              {showBalance ? formatCurrency(totalBalance) : "••••••"}
-            </div>
-            <div className="flex items-center gap-2">
-              {monthlyChange >= 0 ? (
-                <ArrowUpRight className="w-5 h-5 text-green-300" />
-              ) : (
-                <ArrowDownRight className="w-5 h-5 text-red-300" />
-              )}
-              <span className={`font-semibold ${monthlyChange >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                {monthlyChange >= 0 ? '+' : ''}{formatCurrency(monthlyChange)} ({monthlyChangePercent.toFixed(1)}%)
-              </span>
-              <span className="text-blue-200 text-sm">rispetto al mese scorso</span>
-            </div>
-          </div>
+        {/* Total Balance Card - Compact version */}
+        <div className={`relative ${theme.background.card} ${theme.border.card} border rounded-2xl p-4 md:p-6 shadow-lg overflow-hidden group transition-all duration-300 hover:shadow-xl`}>
+          {/* Background Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-teal-500/10 opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
           
-          <div className="flex gap-3">
-            <button 
-              onClick={() => setIsTransferModalOpen(true)}
-              className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2"
-            >
-              <ArrowLeftRight className="w-4 h-4" />
-              Trasferisci
-            </button>
-            <button 
-              onClick={handleAddAccount}
-              className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Aggiungi Conto
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Conti */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {accounts.map((account) => {
-          const IconComponent = account.icon;
-          return (
-            <div key={account.id} className="bg-gray-800 p-4 sm:p-6 rounded-2xl border border-gray-700 hover:border-gray-600 transition-all group relative">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/25">
+                  <Wallet className="w-5 h-5 text-white" />
+                </div>
+                <h2 className={`text-lg md:text-xl font-bold ${theme.text.primary}`}>Saldo Totale</h2>
+              </div>
               
-              <div className="flex items-center justify-between mb-4">
-                <div 
-                  className="p-3 rounded-2xl"
-                  style={{ backgroundColor: `${account.color}20`, border: `1px solid ${account.color}40` }}
-                >
-                  <IconComponent className="w-6 h-6" style={{ color: account.color }} />
+              <button
+                onClick={() => setShowBalance(!showBalance)}
+                className={`p-2 ${theme.background.glass} ${theme.border.card} border rounded-lg hover:bg-gray-700/50 transition-all duration-200`}
+              >
+                {showBalance ? 
+                  <Eye className="w-4 h-4 text-indigo-400" /> : 
+                  <EyeOff className="w-4 h-4 text-indigo-400" />
+                }
+              </button>
+            </div>
+            
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+              <div className="space-y-2">
+                <div className={`text-2xl md:text-3xl font-bold ${theme.text.primary} tracking-tight`}>
+                  {showBalance ? formatCurrency(totalBalance) : "••••••"}
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full">
-                    {getAccountTypeLabel(account.type)}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {monthlyChange >= 0 ? (
+                    <ArrowUpRight className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  )}
+                  <span className={`font-semibold text-sm ${monthlyChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {monthlyChange >= 0 ? '+' : ''}{formatCurrency(monthlyChange)} ({monthlyChangePercent.toFixed(1)}%)
                   </span>
-                  
-                  {/* Menu button */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setOpenMenuId(openMenuId === account.id ? null : account.id)}
-                      className="p-1 text-gray-400 hover:text-white transition-colors rounded"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                    
-                    {/* Dropdown menu */}
-                    {openMenuId === account.id && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
-                        <div className="absolute top-8 right-0 z-50 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-xl">
-                          <button
-                            onClick={() => handleEditAccount(account)}
-                            className="w-full px-4 py-2 text-left text-blue-400 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-2"
-                          >
-                            <Edit className="w-4 h-4" />
-                            Modifica Conto
-                          </button>
-                          <button
-                            onClick={() => handleAdjustBalance(account)}
-                            className="w-full px-4 py-2 text-left text-yellow-400 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-2"
-                          >
-                            <DollarSign className="w-4 h-4" />
-                            Correggi Saldo
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAccount(account.id)}
-                            className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Elimina Conto
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  <span className={`${theme.text.muted} text-sm`}>rispetto al mese scorso</span>
                 </div>
               </div>
               
-              <div className="mb-3">
-                <h3 className="font-semibold text-lg text-white mb-1 group-hover:text-blue-300 transition-colors">
-                  {account.name}
-                </h3>
-                <p className="text-gray-400 text-sm">{account.bank}</p>
+              <div className="flex gap-2 flex-wrap">
+                <button 
+                  onClick={() => setIsTransferModalOpen(true)}
+                  className="bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 hover:border-indigo-500/50 px-3 py-2 rounded-xl font-semibold text-indigo-400 hover:text-indigo-300 transition-all duration-200 flex items-center gap-2 text-sm"
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                  Trasferisci
+                </button>
+                <button 
+                  onClick={handleAddAccount}
+                  className="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/50 px-3 py-2 rounded-xl font-semibold text-emerald-400 hover:text-emerald-300 transition-all duration-200 flex items-center gap-2 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Aggiungi Conto
+                </button>
               </div>
-              
-              <div className="mb-3">
-                <div className="text-2xl font-bold" style={{ color: account.color }}>
-                  {showBalance ? formatCurrency(account.balance) : "••••••"}
-                </div>
-              </div>
-              
-              <div className="text-xs text-gray-400">
-                Ultimo movimento: {formatDate(account.lastTransaction)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Grafici */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        
-        {/* Storico Disponibilità */}
-        <div className="xl:col-span-2 bg-gray-800 p-4 sm:p-6 rounded-2xl border border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="w-6 h-6 text-green-400" />
-              <h3 className="text-xl sm:text-2xl font-bold">Storico Disponibilità</h3>
-            </div>
-            <div className="text-sm text-gray-400">
-              Ultimi 6 mesi
             </div>
           </div>
-          
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={balanceHistory}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="total" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} name="Totale" />
-            </AreaChart>
-          </ResponsiveContainer>
         </div>
 
-        {/* Distribuzione Conti */}
-        <div className="bg-gray-800 p-4 sm:p-6 rounded-2xl border border-gray-700">
-          <div className="flex items-center gap-3 mb-6">
-            <PieChart className="w-6 h-6 text-purple-400" />
-            <h3 className="text-xl sm:text-2xl font-bold">Distribuzione</h3>
-          </div>
-          
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={accountsChartData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                innerRadius={40}
+        {/* Accounts Grid - Compact cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {accounts.map((account) => {
+            const IconComponent = account.icon;
+            return (
+              <div 
+                key={account.id} 
+                className={`${theme.background.card} ${theme.border.card} ${theme.background.cardHover} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden`}
               >
-                {accountsChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-          
-          <div className="mt-4 space-y-2">
-            {accounts.map((account) => {
-              const percentage = ((account.balance / totalBalance) * 100).toFixed(1);
-              return (
-                <div key={account.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: account.color }}></div>
-                    <span className="text-gray-300">{account.name}</span>
+                {/* Subtle gradient overlay */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+                     style={{ background: `linear-gradient(135deg, ${account.color}20, transparent)` }} />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-3">
+                    <div 
+                      className="p-2 rounded-xl border shadow-sm"
+                      style={{ 
+                        backgroundColor: `${account.color}15`, 
+                        borderColor: `${account.color}30`,
+                        boxShadow: `0 2px 8px ${account.color}15`
+                      }}
+                    >
+                      <IconComponent className="w-5 h-5" style={{ color: account.color }} />
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${theme.text.muted} ${theme.background.secondary} px-2 py-1 rounded-full font-medium`}>
+                        {getAccountTypeLabel(account.type)}
+                      </span>
+                      
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === account.id ? null : account.id)}
+                          className={`p-1 ${theme.text.muted} hover:text-gray-50 transition-colors rounded hover:bg-gray-700/50`}
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        
+                        {openMenuId === account.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+                            <div className={`absolute top-6 right-0 z-50 w-44 ${theme.background.card} ${theme.border.card} border rounded-lg shadow-xl overflow-hidden`}>
+                              <button
+                                onClick={() => handleEditAccount(account)}
+                                className={`w-full px-3 py-2 text-left text-indigo-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
+                              >
+                                <Edit className="w-3 h-3" />
+                                Modifica Conto
+                              </button>
+                              <button
+                                onClick={() => handleAdjustBalance(account)}
+                                className={`w-full px-3 py-2 text-left text-amber-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
+                              >
+                                <DollarSign className="w-3 h-3" />
+                                Correggi Saldo
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAccount(account.id)}
+                                className={`w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Elimina Conto
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <span className="font-medium text-white">{percentage}%</span>
+                  
+                  <div className="mb-3 space-y-1">
+                    <h3 className={`font-semibold text-base ${theme.text.primary} group-hover:text-indigo-400 transition-colors leading-tight`}>
+                      {account.name}
+                    </h3>
+                    <p className={`${theme.text.muted} text-sm`}>{account.bank}</p>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <div className="text-lg font-bold leading-tight" style={{ color: account.color }}>
+                      {showBalance ? formatCurrency(account.balance) : "••••••"}
+                    </div>
+                  </div>
+                  
+                  <div className={`text-xs ${theme.text.subtle}`}>
+                    Ultimo movimento: {formatDate(account.lastTransaction)}
+                  </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Charts Section - Responsive Grid with compact size */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+          
+          {/* Balance History Chart */}
+          <div className={`xl:col-span-2 ${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-lg shadow-emerald-500/25">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Storico Disponibilità</h3>
+              </div>
+              <div className={`text-sm ${theme.text.muted} font-medium`}>
+                Ultimi 6 mesi
+              </div>
+            </div>
+            
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={balanceHistory}>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#E5E7EB"} />
+                <XAxis dataKey="month" stroke={isDarkMode ? "#9CA3AF" : "#6B7280"} fontSize={11} />
+                <YAxis stroke={isDarkMode ? "#9CA3AF" : "#6B7280"} fontSize={11} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="total" 
+                  stroke="#6366F1" 
+                  fill="url(#colorGradient)" 
+                  strokeWidth={2}
+                  name="Totale" 
+                />
+                <defs>
+                  <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Account Distribution */}
+          <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg shadow-purple-500/25">
+                <PieChart className="w-5 h-5 text-white" />
+              </div>
+              <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Distribuzione</h3>
+            </div>
+            
+            <ResponsiveContainer width="100%" height={160}>
+              <PieChart>
+                <Pie
+                  data={accountsChartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={60}
+                  innerRadius={30}
+                  paddingAngle={2}
+                >
+                  {accountsChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            <div className="mt-3 space-y-2">
+              {accounts.map((account) => {
+                const percentage = ((account.balance / totalBalance) * 100).toFixed(1);
+                return (
+                  <div key={account.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: account.color }}></div>
+                      <span className={`${theme.text.secondary} truncate text-xs`}>{account.name}</span>
+                    </div>
+                    <span className={`font-semibold ${theme.text.primary} ml-2 text-xs`}>{percentage}%</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Dettaglio per Conto */}
-      <div className="bg-gray-800 p-4 sm:p-6 rounded-2xl border border-gray-700">
-        <div className="flex items-center gap-3 mb-6">
-          <BarChart className="w-6 h-6 text-blue-400" />
-          <h3 className="text-xl sm:text-2xl font-bold">Dettaglio per Conto</h3>
+        {/* Account Details Bar Chart - Compact version */}
+        <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg shadow-lg shadow-blue-500/25">
+              <BarChart className="w-5 h-5 text-white" />
+            </div>
+            <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Dettaglio per Conto</h3>
+          </div>
+          
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={balanceHistory} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#E5E7EB"} />
+              <XAxis dataKey="month" stroke={isDarkMode ? "#9CA3AF" : "#6B7280"} fontSize={11} />
+              <YAxis stroke={isDarkMode ? "#9CA3AF" : "#6B7280"} fontSize={11} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="checking" fill="#6366F1" name="Conto Corrente" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="savings" fill="#10B981" name="Risparmio" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="prepaid" fill="#F59E0B" name="Prepagata" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="business" fill="#8B5CF6" name="Business" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
-        
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={balanceHistory}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="month" stroke="#9CA3AF" />
-            <YAxis stroke="#9CA3AF" />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="checking" fill="#4C6FFF" name="Conto Corrente" />
-            <Bar dataKey="savings" fill="#10B981" name="Risparmio" />
-            <Bar dataKey="prepaid" fill="#F59E0B" name="Prepagata" />
-            <Bar dataKey="business" fill="#8B5CF6" name="Business" />
-          </BarChart>
-        </ResponsiveContainer>
       </div>
 
       {/* Modals */}
