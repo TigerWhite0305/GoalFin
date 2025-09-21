@@ -126,15 +126,6 @@ const StatisticsHeader: React.FC<StatisticsHeaderProps> = ({
           <Download className="w-4 h-4" />
           <span className="hidden sm:inline">Esporta</span>
         </button>
-
-        {/* Settings Button */}
-        <button
-          onClick={onToggleSettings}
-          className={`${theme.background.card} ${theme.border} border ${theme.hover} px-4 py-2 rounded-lg ${theme.text.secondary} hover:${theme.text.primary} font-medium transition-colors flex items-center gap-2`}
-        >
-          <Settings className="w-4 h-4" />
-          <span className="hidden sm:inline">Impostazioni</span>
-        </button>
       </div>
     </div>
   );
