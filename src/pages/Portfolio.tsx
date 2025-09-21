@@ -68,6 +68,35 @@ const Portfolio: React.FC = () => {
     },
   ]);
 
+  // Aggiungi questo state dopo gli altri stati esistenti (riga ~18 circa):
+  const [activityHistory, setActivityHistory] = useState<Array<{
+    id: number;
+    type: 'account_created' | 'account_edited' | 'account_deleted' | 'balance_adjusted' | 'transfer';
+    timestamp: string;
+    description: string;
+    icon: any;
+    color: string;
+    amount?: number;
+  }>>([
+    {
+      id: 1,
+      type: 'account_created',
+      timestamp: '2025-09-15T14:30:00',
+      description: 'Conto "Conto Corrente Principale" creato',
+      icon: Plus,
+      color: '#10B981'
+    },
+    {
+      id: 2,
+      type: 'transfer',
+      timestamp: '2025-09-14T11:45:00',
+      description: 'Trasferimento di €200 da Conto Corrente a Conto Risparmio',
+      icon: ArrowLeftRight,
+      color: '#6366F1',
+      amount: 200
+    }
+  ]);
+
   // Theme colors matching Transactions page style
   const getThemeColors = () => {
     if (isDarkMode) {
@@ -147,6 +176,19 @@ const Portfolio: React.FC = () => {
     const account = accounts.find(acc => acc.id === accountId);
     setAccounts(prev => prev.filter(acc => acc.id !== accountId));
     setOpenMenuId(null);
+    
+    // Add to activity history
+    if (account) {
+      setActivityHistory(prev => [{
+        id: Date.now(),
+        type: 'account_deleted',
+        timestamp: new Date().toISOString(),
+        description: `Conto "${account.name}" eliminato`,
+        icon: Trash2,
+        color: '#EF4444'
+      }, ...prev]);
+    }
+    
     addToast(`Conto "${account?.name}" eliminato con successo`, 'success');
   };
 
@@ -174,6 +216,17 @@ const Portfolio: React.FC = () => {
       setAccounts(prev => prev.map(acc => 
         acc.id === editingAccount.id ? updatedAccount : acc
       ));
+      
+      // Add to activity history
+      setActivityHistory(prev => [{
+        id: Date.now(),
+        type: 'account_edited',
+        timestamp: new Date().toISOString(),
+        description: `Conto "${accountData.name}" modificato`,
+        icon: Edit,
+        color: '#F59E0B'
+      }, ...prev]);
+      
       addToast(`Conto "${accountData.name}" modificato con successo`, 'success');
     } else {
       const accountTypes = {
@@ -198,6 +251,17 @@ const Portfolio: React.FC = () => {
       };
       
       setAccounts(prev => [...prev, account]);
+      
+      // Add to activity history
+      setActivityHistory(prev => [{
+        id: Date.now(),
+        type: 'account_created',
+        timestamp: new Date().toISOString(),
+        description: `Conto "${accountData.name}" creato`,
+        icon: Plus,
+        color: '#10B981'
+      }, ...prev]);
+      
       addToast(`Conto "${accountData.name}" aggiunto con successo`, 'success');
     }
     
@@ -224,6 +288,17 @@ const Portfolio: React.FC = () => {
       return acc;
     }));
     
+    // Add to activity history
+    setActivityHistory(prev => [{
+      id: Date.now(),
+      type: 'transfer',
+      timestamp: new Date().toISOString(),
+      description: `Trasferimento di ${formatCurrency(amount)} da "${fromAccount.name}" a "${toAccount.name}"${description ? ` - ${description}` : ''}`,
+      icon: ArrowLeftRight,
+      color: '#6366F1',
+      amount: amount
+    }, ...prev]);
+    
     addToast(`Trasferiti ${formatCurrency(amount)} da "${fromAccount.name}" a "${toAccount.name}"`, 'success');
     setIsTransferModalOpen(false);
   };
@@ -238,11 +313,25 @@ const Portfolio: React.FC = () => {
     const account = accounts.find(acc => acc.id === accountId);
     if (!account) return;
     
+    const oldBalance = account.balance;
+    const difference = newBalance - oldBalance;
+    
     setAccounts(prev => prev.map(acc =>
       acc.id === accountId 
         ? { ...acc, balance: newBalance, lastTransaction: new Date().toISOString() }
         : acc
     ));
+    
+    // Add to activity history
+    setActivityHistory(prev => [{
+      id: Date.now(),
+      type: 'balance_adjusted',
+      timestamp: new Date().toISOString(),
+      description: `Saldo di "${account.name}" ${difference >= 0 ? 'aumentato' : 'diminuito'} di ${formatCurrency(Math.abs(difference))} - ${reason}`,
+      icon: DollarSign,
+      color: difference >= 0 ? '#10B981' : '#EF4444',
+      amount: Math.abs(difference)
+    }, ...prev]);
     
     addToast(`Saldo di "${account.name}" aggiornato a ${formatCurrency(newBalance)}`, 'success');
     setIsBalanceAdjustModalOpen(false);
@@ -272,11 +361,23 @@ const Portfolio: React.FC = () => {
     return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
 
+  const formatTime = (dateString: string) => {
+    const d = new Date(dateString);
+    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  };
+
   const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
   const currentMonth = balanceHistory[balanceHistory.length - 1];
   const previousMonth = balanceHistory[balanceHistory.length - 2];
   const monthlyChange = currentMonth.total - previousMonth.total;
   const monthlyChangePercent = ((monthlyChange / previousMonth.total) * 100);
+
+  const handleDeleteActivity = (activityId: number) => {
+  const activity = activityHistory.find(act => act.id === activityId);
+  setActivityHistory(prev => prev.filter(act => act.id !== activityId));
+  setOpenMenuId(null);
+  addToast(`Attività "${activity?.description}" rimossa dal log`, 'success');
+  };
 
   const getAccountTypeLabel = (type: string) => {
     switch (type) {
@@ -593,6 +694,99 @@ const Portfolio: React.FC = () => {
               <Bar dataKey="business" fill="#8B5CF6" name="Business" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Activity History Section */}
+        <div className={`${theme.background.card} ${theme.border.card} border rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden`}>
+          {/* Header fisso */}
+          <div className="p-4 border-b border-gray-700/30">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-lg shadow-amber-500/25">
+                <History className="w-5 h-5 text-white" />
+              </div>
+              <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Storico Attività</h3>
+            </div>
+          </div>
+          
+          {/* Contenuto scrollabile */}
+          <div className="h-80 overflow-y-auto p-4">
+            <div className="space-y-3">
+              {activityHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <History className={`w-12 h-12 ${theme.text.muted} mx-auto mb-3`} />
+                  <p className={`${theme.text.muted} text-sm`}>Nessuna attività registrata</p>
+                </div>
+              ) : (
+              // Nel codice delle activity cards, sostituisci il div esistente con questo:
+              activityHistory.slice(0, 20).map((activity) => {
+                const IconComponent = activity.icon;
+                return (
+                  <div
+                    key={activity.id}
+                    className={`flex items-start gap-3 p-3 ${theme.background.secondary}/30 rounded-lg hover:bg-gray-700/30 dark:hover:bg-gray-700/30 light:hover:bg-gray-100/50 transition-colors group`}
+                  >
+                    <div 
+                      className="p-2 rounded-lg flex-shrink-0"
+                      style={{ 
+                        backgroundColor: `${activity.color}20`, 
+                        borderColor: `${activity.color}40`,
+                      }}
+                    >
+                      <IconComponent className="w-4 h-4" style={{ color: activity.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`${theme.text.primary} text-sm font-medium leading-tight`}>
+                        {activity.description}
+                      </p>
+                      <p className={`${theme.text.muted} text-xs mt-1`}>
+                        {formatDate(activity.timestamp)} alle {formatTime(activity.timestamp)}
+                      </p>
+                    </div>
+                    {activity.amount && (
+                      <div className={`text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0`} 
+                          style={{ backgroundColor: `${activity.color}20`, color: activity.color }}>
+                        {formatCurrency(activity.amount)}
+                      </div>
+                    )}
+                    
+                    {/* Menu tre puntini */}
+                    <div className="relative opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setOpenMenuId(openMenuId === activity.id ? null : activity.id)}
+                        className={`p-1 ${theme.text.muted} hover:text-gray-50 transition-colors rounded hover:bg-gray-700/50`}
+                      >
+                        <MoreVertical className="w-3 h-3" />
+                      </button>
+                      
+                      {openMenuId === activity.id && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+                          <div className={`absolute top-6 right-0 z-50 w-36 ${theme.background.card} ${theme.border.card} border rounded-lg shadow-xl overflow-hidden`}>
+                            <button
+                              onClick={() => handleDeleteActivity(activity.id)}
+                              className={`w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Elimina Log
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              }))}
+            </div>
+          </div>
+          
+          {/* Footer fisso se necessario */}
+          {activityHistory.length > 20 && (
+            <div className="p-4 border-t border-gray-700/30 text-center">
+              <button className={`text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors`}>
+                Mostra tutte le attività ({activityHistory.length})
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
