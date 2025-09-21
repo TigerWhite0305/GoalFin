@@ -3,7 +3,7 @@ import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, Wallet, Target } from "lucide-react";
 import ChartHoverExport from "../ChartHoverExport";
-import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
+import { useAdvancedChartsContext } from "../../../context/AdvancedChartsContext";
 import { useTheme } from "../../../context/ThemeContext";
 
 interface PatrimonioData {
@@ -130,7 +130,7 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
   const crescitaPercentuale = ((crescitaTotale / firstData.totale) * 100).toFixed(1);
   const progressoObiettivo = ((latestData.totale / latestData.obiettivo) * 100).toFixed(1);
   
-  const { quickExport, openExportModal } = useAdvancedCharts();
+  const { quickExport, openExportModal } = useAdvancedChartsContext();
   const getExportConfig = () => ({
     chartId: 'area-chart',
     chartName: 'Crescita Patrimonio',

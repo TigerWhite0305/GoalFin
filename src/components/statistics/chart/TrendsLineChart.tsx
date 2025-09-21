@@ -3,7 +3,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, Calendar } from "lucide-react";
 import ChartHoverExport from "../ChartHoverExport";
-import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
+import { useAdvancedChartsContext } from "../../../context/AdvancedChartsContext";
 import { useTheme } from "../../../context/ThemeContext";
 
 interface TrendData {
@@ -102,7 +102,7 @@ const TrendsLineChart: React.FC<TrendsLineChartProps> = ({
     return null;
   };
 
-  const { quickExport, openExportModal } = useAdvancedCharts();
+  const { quickExport, openExportModal } = useAdvancedChartsContext();
   const getExportConfig = () => ({
     chartId: 'trends-chart',
     chartName: 'Trend Finanziario',

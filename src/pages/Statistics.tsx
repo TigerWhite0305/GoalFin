@@ -1,16 +1,11 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Heart, Home, Car, Gamepad2, ShoppingCart, DollarSign, TrendingUp, Calendar, Filter, Download, BarChart3 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
-
-// Import hook personalizzato e types
-import useAdvancedCharts from "../hooks/useAdvancedCharts";
-
-// Import componenti UI
+import { AdvancedChartsProvider, useAdvancedChartsContext } from "../context/AdvancedChartsContext";
 import StatisticsHeader from "../components/statistics/StatisticsHeader";
 import AdvancedFiltersDashboard from "../components/statistics/AdvancedFiltersDashboard";
 import GranularExportSystem from "../components/statistics/GranularExportSystem";
-
-// Import grafici
+import ExportModal from "../components/statistics/ExportModal";
 import ExpenseChart from "../components/statistics/chart/ExpenseChart";
 import CategoryBreakdown from "../components/statistics/chart/CategoryBreakdown";
 import TrendsLineChart from "../components/statistics/chart/TrendsLineChart";
@@ -27,6 +22,12 @@ interface ExportConfig {
   chartRef?: React.RefObject<HTMLElement>;
 }
 
+interface ExportSettings {
+  format: 'CSV' | 'JSON' | 'Excel';
+  includeCharts: boolean;
+  dateRange: string;
+}
+
 interface ChartData {
   name: string;
   value: number;
@@ -35,7 +36,7 @@ interface ChartData {
   icon: React.ComponentType<any>;
 }
 
-const Statistics: React.FC = () => {
+const StatisticsContent: React.FC = () => {
   const { isDarkMode } = useTheme();
   
   // Refs per i grafici
@@ -46,7 +47,15 @@ const Statistics: React.FC = () => {
   const goalsChartRef = useRef<HTMLDivElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
 
-  // Hook sistema avanzato
+  // Stati per ExportModal
+  const [showGlobalExportModal, setShowGlobalExportModal] = useState(false);
+  const [globalExportSettings, setGlobalExportSettings] = useState<ExportSettings>({
+    format: 'CSV',
+    includeCharts: false,
+    dateRange: '6M'
+  });
+
+  // Hook sistema avanzato - ora dal Context condiviso
   const {
     filters,
     showAdvancedFilters,
@@ -64,7 +73,7 @@ const Statistics: React.FC = () => {
     getFilteredExpenseData,
     getFilteredTrendsData,
     getFilteredGoalsData
-  } = useAdvancedCharts();
+  } = useAdvancedChartsContext();
 
   // useEffect per registrazione refs
   React.useEffect(() => {
@@ -75,6 +84,18 @@ const Statistics: React.FC = () => {
     registerChartRef('goals-chart', goalsChartRef as React.RefObject<HTMLElement>);
     registerChartRef('category-breakdown', categoryRef as React.RefObject<HTMLElement>);
   }, [registerChartRef]);
+
+  // Funzioni per gestire ExportModal globale
+  const handleGlobalExport = () => {
+    console.log('Esportazione globale:', globalExportSettings);
+    // Qui implementerai la logica di export globale
+    // Esempio: generare file con tutti i dati della dashboard
+    setShowGlobalExportModal(false);
+  };
+
+  const updateGlobalExportSettings = (newSettings: ExportSettings) => {
+    setGlobalExportSettings(newSettings);
+  };
 
   // Theme colors seguendo il design system GoalFin
   const getThemeColors = () => {
@@ -254,7 +275,7 @@ const Statistics: React.FC = () => {
             onPeriodChange={(period) => updateFilters({ globalPeriod: period })}
             onToggleFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
             onToggleSettings={() => {/* Mantieni logica settings esistente se necessaria */}}
-            onShowExportModal={() => openExportModal(getExportConfig('global', 'Dashboard Completa'))}
+            onShowExportModal={() => setShowGlobalExportModal(true)}
           />
         </div>
 
@@ -356,7 +377,16 @@ const Statistics: React.FC = () => {
           onResetFilters={resetFilters}
         />
 
-        {/* Sistema Export Granulare */}
+        {/* Modal Export Globale (Dashboard completa) */}
+        <ExportModal
+          isOpen={showGlobalExportModal}
+          onClose={() => setShowGlobalExportModal(false)}
+          exportSettings={globalExportSettings}
+          onUpdateSettings={updateGlobalExportSettings}
+          onExport={handleGlobalExport}
+        />
+
+        {/* Sistema Export Granulare (Singoli chart) */}
         {currentExportConfig && (
           <GranularExportSystem
             isOpen={showExportModal}
@@ -367,6 +397,15 @@ const Statistics: React.FC = () => {
         )}
       </div>
     </div>
+  );
+};
+
+// Componente wrapper con Provider
+const Statistics: React.FC = () => {
+  return (
+    <AdvancedChartsProvider>
+      <StatisticsContent />
+    </AdvancedChartsProvider>
   );
 };
 

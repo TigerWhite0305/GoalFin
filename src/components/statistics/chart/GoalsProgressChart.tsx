@@ -3,7 +3,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Target, Calendar, TrendingUp, Award, Clock } from "lucide-react";
 import ChartHoverExport from "../ChartHoverExport";
-import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
+import { useAdvancedChartsContext } from "../../../context/AdvancedChartsContext";
 import { useTheme } from "../../../context/ThemeContext";
 
 interface Goal {
@@ -128,7 +128,7 @@ const GoalsProgressChart: React.FC<GoalsProgressChartProps> = ({ formatCurrency 
     };
   });
 
-  const { quickExport, openExportModal } = useAdvancedCharts();
+  const { quickExport, openExportModal } = useAdvancedChartsContext();
   const getExportConfig = () => ({
     chartId: 'goals-chart',
     chartName: 'Progresso Obiettivi',

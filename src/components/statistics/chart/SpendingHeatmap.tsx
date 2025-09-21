@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Calendar, Activity, TrendingDown, DollarSign, X } from "lucide-react";
 import ChartHoverExport from "../ChartHoverExport";
-import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
+import { useAdvancedChartsContext } from "../../../context/AdvancedChartsContext";
 import { useTheme } from "../../../context/ThemeContext";
 
 interface DayData {
@@ -121,7 +121,7 @@ const SpendingHeatmap: React.FC<SpendingHeatmapProps> = ({ formatCurrency }) => 
   const maxDay = monthData.reduce((max, day) => day.amount > max.amount ? day : max);
   const totalTransactions = monthData.reduce((sum, day) => sum + day.transactions, 0);
   
-  const { quickExport, openExportModal } = useAdvancedCharts();
+  const { quickExport, openExportModal } = useAdvancedChartsContext();
 
   const getExportConfig = () => ({
     chartId: 'heatmap-chart',

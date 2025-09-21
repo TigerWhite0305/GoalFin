@@ -4,7 +4,8 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { TrendingDown } from "lucide-react";
 import { useTheme } from "../../../context/ThemeContext";
 import ChartHoverExport from "../ChartHoverExport";
-import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
+import { useAdvancedChartsContext } from "../../../context/AdvancedChartsContext";
+
 
 interface ChartData {
   name: string;
@@ -32,8 +33,7 @@ const ExpenseChart = forwardRef<HTMLDivElement, ExpenseChartProps>(({
   customTooltip: CustomTooltip
 }, ref) => {
   const { isDarkMode } = useTheme();
-  const { quickExport, openExportModal } = useAdvancedCharts();
-
+  const { quickExport, openExportModal } = useAdvancedChartsContext();
   // Theme colors seguendo il design system GoalFin
   const getThemeColors = () => {
     if (isDarkMode) {

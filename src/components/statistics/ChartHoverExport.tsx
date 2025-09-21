@@ -139,19 +139,6 @@ const ChartHoverExport: React.FC<ChartHoverExportProps> = ({
                 <Settings className="w-3 h-3" />
                 <span>Opzioni Avanzate</span>
               </button>
-              
-              {availableFormats.length > 3 && (
-                <button
-                  onClick={() => {
-                    onAdvancedExport();
-                    setIsExpanded(false);
-                  }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs ${theme.menu.itemText} ${theme.menu.itemHover} hover:bg-gray-600 transition-all duration-200`}
-                >
-                  <MoreHorizontal className="w-3 h-3" />
-                  <span>Altri Formati</span>
-                </button>
-              )}
             </div>
           </div>
         )}

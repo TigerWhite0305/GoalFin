@@ -2,8 +2,8 @@
 import React, { forwardRef } from 'react';
 import { Activity, DollarSign } from "lucide-react";
 import { useTheme } from "../../../context/ThemeContext";
+import { useAdvancedChartsContext } from "../../../context/AdvancedChartsContext";
 import ChartHoverExport from "../ChartHoverExport";
-import useAdvancedCharts from "../../../hooks/useAdvancedCharts";
 
 interface ChartData {
   name: string;
@@ -27,7 +27,8 @@ const CategoryBreakdown = forwardRef<HTMLDivElement, CategoryBreakdownProps>(({
   selectedPeriod
 }, ref) => {
   const { isDarkMode } = useTheme();
-  const { quickExport, openExportModal } = useAdvancedCharts();
+  // Ora usa il Context condiviso invece dell'hook diretto
+  const { quickExport, openExportModal } = useAdvancedChartsContext();
 
   // Theme colors seguendo il design system GoalFin
   const getThemeColors = () => {
@@ -112,8 +113,13 @@ const CategoryBreakdown = forwardRef<HTMLDivElement, CategoryBreakdownProps>(({
                 chartName="Dettaglio Categorie"
                 availableFormats={['PNG', 'CSV', 'JSON']}
                 onQuickExport={(format) => quickExport('category-breakdown', format)}
-                onAdvancedExport={() => openExportModal(getExportConfig())}
-                position="inline"
+                onAdvancedExport={() => {
+                  console.log('CategoryBreakdown: onAdvancedExport chiamato - usando Context');
+                  const config = getExportConfig();
+                  console.log('CategoryBreakdown: config generato', config);
+                  openExportModal(config);
+                }} 
+               position="inline"
               />
             </div>
           </div>

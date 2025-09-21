@@ -110,8 +110,10 @@ const useAdvancedCharts = () => {
 
   // Funzioni per export
   const openExportModal = useCallback((config: ExportConfig) => {
+    console.log('Hook: openExportModal chiamato con config:', config);
     setCurrentExportConfig(config);
     setShowExportModal(true);
+    console.log('Hook: stati aggiornati - showExportModal dovrebbe essere true');
   }, []);
 
   const quickExport = useCallback(async (chartId: string, format: string) => {
