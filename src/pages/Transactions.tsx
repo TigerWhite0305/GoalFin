@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Filter, Plus, Calendar, TrendingUp, TrendingDown, Repeat, X, CheckCircle2, DollarSign, Type, FileText, Clock } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import TransactionModal from '../components/ui/TransactionModal';
 
@@ -23,6 +24,7 @@ export type Transaction = {
 type TabType = "all" | "income" | "expense" | "recurring";
 
 const TransactionsPage: React.FC = () => {
+  const { isDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -36,6 +38,29 @@ const TransactionsPage: React.FC = () => {
   const { addToast } = useToast();
 
   const buttonRefs = useRef<Map<number, HTMLButtonElement | null>>(new Map());
+
+  // Theme-aware colors seguendo il design system
+  const getThemeColors = () => ({
+    background: {
+      primary: isDarkMode ? "bg-gray-900" : "bg-white",
+      card: isDarkMode ? "bg-gray-800" : "bg-white",
+      secondary: isDarkMode ? "bg-gray-700" : "bg-gray-100",
+      input: isDarkMode ? "bg-gray-700" : "bg-white"
+    },
+    text: {
+      primary: isDarkMode ? "text-gray-50" : "text-gray-900",
+      secondary: isDarkMode ? "text-gray-300" : "text-gray-700",
+      muted: isDarkMode ? "text-gray-400" : "text-gray-600",
+      subtle: isDarkMode ? "text-gray-500" : "text-gray-500"
+    },
+    border: isDarkMode ? "border-gray-700" : "border-gray-200",
+    accent: {
+      primary: "from-indigo-500 via-purple-500 to-teal-400",
+      hover: isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+    }
+  });
+
+  const colors = getThemeColors();
 
   // Sample data con transazioni ricorrenti
   const [transactions, setTransactions] = useState<Transaction[]>([
@@ -181,14 +206,14 @@ const TransactionsPage: React.FC = () => {
   const totalExpense = transactions.filter(tx => tx.type === "expense").reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-6">
+    <div className={`min-h-screen ${colors.background.primary} ${colors.text.primary} p-3 sm:p-6 transition-colors duration-300`}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3 md:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Tutte le Transazioni
+          <h1 className={`text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r ${colors.accent.primary} bg-clip-text text-transparent`}>
+            Transazioni
           </h1>
-          <p className="text-gray-400 mt-1">Gestisci tutte le tue entrate e uscite</p>
+          <p className={`${colors.text.muted} mt-1 text-sm md:text-base`}>Gestisci le tue entrate e uscite</p>
         </div>
         
         <button
@@ -196,76 +221,82 @@ const TransactionsPage: React.FC = () => {
             setModalTransaction(undefined);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 px-4 py-2 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl"
+          className={`flex items-center gap-2 bg-gradient-to-r ${colors.accent.primary} hover:from-indigo-600 hover:via-purple-600 hover:to-teal-500 px-3 md:px-4 py-2 rounded-lg md:rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl text-white text-sm md:text-base`}
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4 md:w-5 md:h-5" />
           Nuova Transazione
         </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+        <div className={`${colors.background.card} p-3 md:p-4 rounded-lg md:rounded-xl border ${colors.border} backdrop-blur-sm`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm">Entrate Totali</p>
-              <p className="text-xl font-bold text-green-400">{formatCurrency(totalIncome)}</p>
+              <p className={`${colors.text.muted} text-xs md:text-sm`}>Entrate</p>
+              <p className={`text-base md:text-lg font-bold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                {formatCurrency(totalIncome)}
+              </p>
             </div>
-            <TrendingUp className="w-8 h-8 text-green-400" />
+            <TrendingUp className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
           </div>
         </div>
         
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+        <div className={`${colors.background.card} p-3 md:p-4 rounded-lg md:rounded-xl border ${colors.border} backdrop-blur-sm`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm">Uscite Totali</p>
-              <p className="text-xl font-bold text-red-400">{formatCurrency(totalExpense)}</p>
+              <p className={`${colors.text.muted} text-xs md:text-sm`}>Uscite</p>
+              <p className={`text-base md:text-lg font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                {formatCurrency(totalExpense)}
+              </p>
             </div>
-            <TrendingDown className="w-8 h-8 text-red-400" />
+            <TrendingDown className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
           </div>
         </div>
         
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+        <div className={`${colors.background.card} p-3 md:p-4 rounded-lg md:rounded-xl border ${colors.border} backdrop-blur-sm`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm">Bilancio</p>
-              <p className={`text-xl font-bold ${totalIncome - totalExpense >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={`${colors.text.muted} text-xs md:text-sm`}>Bilancio</p>
+              <p className={`text-base md:text-lg font-bold ${totalIncome - totalExpense >= 0 ? (isDarkMode ? 'text-emerald-400' : 'text-emerald-600') : (isDarkMode ? 'text-red-400' : 'text-red-600')}`}>
                 {formatCurrency(totalIncome - totalExpense)}
               </p>
             </div>
-            <DollarSign className="w-8 h-8 text-blue-400" />
+            <DollarSign className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
           </div>
         </div>
         
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+        <div className={`${colors.background.card} p-3 md:p-4 rounded-lg md:rounded-xl border ${colors.border} backdrop-blur-sm`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm">Ricorrenti</p>
-              <p className="text-xl font-bold text-purple-400">{recurringCount}</p>
+              <p className={`${colors.text.muted} text-xs md:text-sm`}>Ricorrenti</p>
+              <p className={`text-base md:text-lg font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                {recurringCount}
+              </p>
             </div>
-            <Repeat className="w-8 h-8 text-purple-400" />
+            <Repeat className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
           </div>
         </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className={`${colors.background.card} rounded-lg md:rounded-xl p-3 md:p-4 mb-4 md:mb-6 border ${colors.border} backdrop-blur-sm`}>
+        <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 ${colors.text.muted}`} />
             <input
               type="text"
               placeholder="Cerca transazioni..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className={`w-full pl-8 md:pl-10 pr-4 py-2 ${colors.background.input} border ${colors.border} rounded-lg ${colors.text.primary} placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm md:text-base`}
             />
           </div>
 
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className={`px-3 md:px-4 py-2 ${colors.background.input} border ${colors.border} rounded-lg ${colors.text.primary} focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm md:text-base`}
           >
             <option value="all">Tutte le categorie</option>
             {categories.map(cat => (
@@ -276,7 +307,7 @@ const TransactionsPage: React.FC = () => {
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className={`px-3 md:px-4 py-2 ${colors.background.input} border ${colors.border} rounded-lg ${colors.text.primary} focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm md:text-base`}
           >
             <option value="all">Tutte le date</option>
             <option value="today">Oggi</option>
@@ -287,13 +318,13 @@ const TransactionsPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4 md:mb-6">
         <button
           onClick={() => setActiveTab("all")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg font-medium transition-all text-sm md:text-base ${
             activeTab === "all" 
-              ? "bg-blue-600 text-white" 
-              : "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700"
+              ? "bg-indigo-600 text-white" 
+              : `${colors.background.card} ${colors.text.secondary} ${colors.accent.hover} border ${colors.border}`
           }`}
         >
           Tutte ({allCount})
@@ -301,90 +332,92 @@ const TransactionsPage: React.FC = () => {
         
         <button
           onClick={() => setActiveTab("income")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg font-medium transition-all text-sm md:text-base ${
             activeTab === "income" 
-              ? "bg-green-600 text-white" 
-              : "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700"
+              ? `${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-600'} text-white` 
+              : `${colors.background.card} ${colors.text.secondary} ${colors.accent.hover} border ${colors.border}`
           }`}
         >
-          <TrendingUp className="w-4 h-4" />
+          <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
           Entrate ({incomeCount})
         </button>
         
         <button
           onClick={() => setActiveTab("expense")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg font-medium transition-all text-sm md:text-base ${
             activeTab === "expense" 
-              ? "bg-red-600 text-white" 
-              : "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700"
+              ? `${isDarkMode ? 'bg-red-600' : 'bg-red-600'} text-white` 
+              : `${colors.background.card} ${colors.text.secondary} ${colors.accent.hover} border ${colors.border}`
           }`}
         >
-          <TrendingDown className="w-4 h-4" />
+          <TrendingDown className="w-3 h-3 md:w-4 md:h-4" />
           Uscite ({expenseCount})
         </button>
         
         <button
           onClick={() => setActiveTab("recurring")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg font-medium transition-all text-sm md:text-base ${
             activeTab === "recurring" 
-              ? "bg-purple-600 text-white" 
-              : "bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700"
+              ? `${isDarkMode ? 'bg-purple-600' : 'bg-purple-600'} text-white` 
+              : `${colors.background.card} ${colors.text.secondary} ${colors.accent.hover} border ${colors.border}`
           }`}
         >
-          <Repeat className="w-4 h-4" />
+          <Repeat className="w-3 h-3 md:w-4 md:h-4" />
           Ricorrenti ({recurringCount})
         </button>
       </div>
 
       {/* Transactions List */}
-      <div className="space-y-3">
+      <div className="space-y-2 md:space-y-3">
         {filteredTransactions.length === 0 ? (
-          <div className="text-center py-12 bg-gray-800 rounded-xl border border-gray-700">
-            <p className="text-gray-400 text-lg">Nessuna transazione trovata</p>
-            <p className="text-gray-500 text-sm mt-2">Prova a modificare i filtri o aggiungi una nuova transazione</p>
+          <div className={`text-center py-8 md:py-12 ${colors.background.card} rounded-lg md:rounded-xl border ${colors.border} backdrop-blur-sm`}>
+            <p className={`${colors.text.muted} text-base md:text-lg`}>Nessuna transazione trovata</p>
+            <p className={`${colors.text.subtle} text-sm mt-2`}>Prova a modificare i filtri o aggiungi una nuova transazione</p>
           </div>
         ) : (
           filteredTransactions.map((tx) => (
             <div
               key={tx.id}
-              className="bg-gray-800 rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-all group"
+              className={`${colors.background.card} rounded-lg md:rounded-xl p-3 md:p-4 border ${colors.border} ${colors.accent.hover} transition-all group backdrop-blur-sm`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 md:gap-4">
                   <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center"
                     style={{ background: `linear-gradient(135deg, ${tx.color}, ${tx.color}cc)` }}
                   >
-                    <span className="text-xl">{getCategoryIcon(tx.category)}</span>
+                    <span className="text-sm md:text-base">{getCategoryIcon(tx.category)}</span>
                   </div>
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">{tx.name}</h3>
+                      <h3 className={`font-semibold text-sm md:text-base ${colors.text.primary}`}>{tx.name}</h3>
                       {tx.isRecurring && (
-                        <Repeat className="w-4 h-4 text-purple-400" />
+                        <Repeat className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-400">
+                    <div className={`flex items-center gap-2 md:gap-3 text-xs md:text-sm ${colors.text.muted}`}>
                       <span>{tx.category}</span>
                       <span>•</span>
                       <span>{formatDate(tx.date)}</span>
                       <span>•</span>
                       <span>{formatTime(tx.date)}</span>
                     </div>
-                    <p className="text-gray-400 text-sm mt-1">{tx.description}</p>
+                    <p className={`${colors.text.muted} text-xs md:text-sm mt-1`}>{tx.description}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 md:gap-4">
                   <div className="text-right">
-                    <div className={`font-bold text-lg ${
-                      tx.type === "income" ? "text-green-400" : "text-red-400"
+                    <div className={`font-bold text-sm md:text-base ${
+                      tx.type === "income" 
+                        ? (isDarkMode ? "text-emerald-400" : "text-emerald-600")
+                        : (isDarkMode ? "text-red-400" : "text-red-600")
                     }`}>
                       {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
                     </div>
                     {tx.isRecurring && tx.recurringInfo && (
-                      <div className="text-xs text-gray-400">
+                      <div className={`text-xs ${colors.text.subtle}`}>
                         Ogni {tx.recurringInfo.frequency} {tx.recurringInfo.frequency === 1 ? 'mese' : 'mesi'}
                       </div>
                     )}
@@ -396,9 +429,9 @@ const TransactionsPage: React.FC = () => {
                         buttonRefs.current.set(tx.id, el);
                       }}
                       onClick={(e) => handleMenuToggle(e, tx.id)}
-                      className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+                      className={`p-1.5 md:p-2 ${colors.text.muted} hover:text-white transition-colors rounded-lg ${colors.accent.hover}`}
                     >
-                      <span className="text-xl">⋮</span>
+                      <span className="text-lg">⋮</span>
                     </button>
                   </div>
                 </div>
@@ -419,7 +452,7 @@ const TransactionsPage: React.FC = () => {
             }}
           />
           <div
-            className="fixed z-50 w-40 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden"
+            className={`fixed z-50 w-32 md:w-40 ${colors.background.card} border ${colors.border} rounded-lg md:rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm`}
             style={{ top: menuCoords.top, left: menuCoords.left }}
           >
             <button
@@ -427,9 +460,9 @@ const TransactionsPage: React.FC = () => {
                 const tx = transactions.find(t => t.id === openMenuId);
                 if (tx) handleEdit(tx);
               }}
-              className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2"
+              className={`w-full px-3 md:px-4 py-2 md:py-3 text-left ${colors.accent.hover} transition-colors flex items-center gap-2 text-sm md:text-base`}
             >
-              <span className="text-blue-400">✏️</span>
+              <span className="text-indigo-400">✏️</span>
               Modifica
             </button>
             <button
@@ -448,7 +481,7 @@ const TransactionsPage: React.FC = () => {
                 setOpenMenuId(null);
                 setMenuCoords(null);
               }}
-              className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2"
+              className={`w-full px-3 md:px-4 py-2 md:py-3 text-left ${colors.accent.hover} transition-colors flex items-center gap-2 text-sm md:text-base`}
             >
               <span className="text-purple-400">📋</span>
               Duplica
@@ -457,7 +490,7 @@ const TransactionsPage: React.FC = () => {
               onClick={() => {
                 if (openMenuId) handleDelete(openMenuId);
               }}
-              className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors flex items-center gap-2 text-red-400"
+              className={`w-full px-3 md:px-4 py-2 md:py-3 text-left ${colors.accent.hover} transition-colors flex items-center gap-2 text-red-400 text-sm md:text-base`}
             >
               <span>🗑️</span>
               Elimina
