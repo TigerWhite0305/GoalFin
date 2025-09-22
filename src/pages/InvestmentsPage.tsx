@@ -23,8 +23,9 @@ import {
   formatDate 
 } from "../utils/InvestmentUtils";
 
-// ✅ IMPORT CORRETTI - Components (con I maiuscola)
+// ✅ IMPORT CORRETTI - Components (percorso aggiornato)
 import PACSetupModal from "../components/Investments/PACSetupModal";
+import InvestmentModal from "../components/Investments/InvestmentModal"; // ✅ NUOVO
 
 export const InvestmentsPage: React.FC = () => {
   const { isDarkMode } = useTheme();
@@ -69,6 +70,8 @@ export const InvestmentsPage: React.FC = () => {
   const [filterAssetClass, setFilterAssetClass] = useState<AssetClass | 'ALL'>('ALL');
   const [isPacModalOpen, setIsPacModalOpen] = useState(false);
   const [editingPac, setEditingPac] = useState<PACPlan | undefined>();
+  const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false); // ✅ NUOVO
+  const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(); // ✅ NUOVO
 
   // ✅ THEME COLORS - Design System
   const getThemeColors = () => ({
@@ -110,6 +113,14 @@ export const InvestmentsPage: React.FC = () => {
     if (success) {
       setIsPacModalOpen(false);
       setEditingPac(undefined);
+    }
+  };
+
+  const handleInvestmentSave = async (investment: Omit<Investment, 'id' | 'createdAt' | 'updatedAt'>) => { // ✅ NUOVO
+    const success = await addInvestment(investment);
+    if (success) {
+      setIsInvestmentModalOpen(false);
+      setEditingInvestment(undefined);
     }
   };
 
@@ -170,13 +181,24 @@ export const InvestmentsPage: React.FC = () => {
             
             <button
               onClick={() => {
+                setEditingInvestment(undefined);
+                setIsInvestmentModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] text-white rounded-lg hover:from-[#5B5BF7] hover:to-[#7C3AED] transition-all font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Acquista</span>
+            </button>
+            
+            <button
+              onClick={() => {
                 setEditingPac(undefined);
                 setIsPacModalOpen(true);
               }}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] text-white rounded-lg hover:from-[#059669] hover:to-[#047857] transition-all font-medium"
             >
               <Plus className="w-4 h-4" />
-              Nuovo PAC
+              <span className="hidden sm:inline">Nuovo PAC</span>
             </button>
           </div>
         </div>
@@ -538,6 +560,19 @@ export const InvestmentsPage: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Investment Modal */}
+      {isInvestmentModalOpen && (
+        <InvestmentModal
+          investment={editingInvestment}
+          isNew={!editingInvestment}
+          onClose={() => {
+            setIsInvestmentModalOpen(false);
+            setEditingInvestment(undefined);
+          }}
+          onSave={handleInvestmentSave}
+        />
       )}
 
       {/* PAC Setup Modal */}
