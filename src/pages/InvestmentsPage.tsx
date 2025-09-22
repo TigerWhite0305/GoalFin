@@ -1,613 +1,557 @@
-import React, { useState } from "react";
-import { TrendingUp, TrendingDown, Plus, Filter, BarChart3, PieChart, History, Wallet } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { TrendingUp, TrendingDown, Plus, Filter, BarChart3, PieChart, History, Wallet, Target, Play, Pause, Trash2, Edit } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 
-// Types
-export type AssetClass = 'STOCKS' | 'ETF' | 'BONDS' | 'COMMODITIES' | 'REAL_ESTATE' | 'CRYPTO' | 'ALTERNATIVE';
-export type InvestmentType = 'SINGLE_PURCHASE' | 'PAC' | 'DIVIDEND_STOCK' | 'BOND' | 'REIT' | 'CRYPTO';
+// ✅ IMPORT CORRETTI - Nuovi hooks e utils
+import { useInvestmentData } from "../hooks/useInvestmentData";
+import { useRealTimePrices } from "../hooks/useRealTimePrices";
+import { usePortfolioCalculations } from "../hooks/usePortfolioCalculations";
 
-export interface Investment {
-  id: string;
-  name: string;
-  symbol: string;
-  assetClass: AssetClass;
-  type: InvestmentType;
-  
-  // Market data (from backend/investpy)
-  currentPrice: number;
-  previousClose: number;
-  dayChange: number;
-  dayChangePercent: number;
-  currency: string;
-  lastUpdated: string;
-  
-  // User portfolio data
-  shares: number;
-  avgBuyPrice: number;
-  totalInvested: number;
-  currentValue: number;
-  
-  // PAC specific
-  monthlyAmount?: number;
-  nextPayment?: string;
-  
-  // Additional info
-  sector?: string;
-  country?: string;
-  isin?: string;
-  
-  // Calculated fields
-  totalReturn: number;
-  totalReturnPercent: number;
-  portfolioWeight: number;
-}
+// ✅ IMPORT CORRETTI - Types e utils
+import { 
+  Investment, 
+  PACPlan, 
+  AssetClass, 
+  InvestmentType,
+  ASSET_CLASS_LABELS,
+  INVESTMENT_TYPE_LABELS 
+} from "../utils/AssetTypes";
+import { 
+  formatCurrency, 
+  formatPercentage, 
+  formatDate 
+} from "../utils/InvestmentUtils";
 
-export interface Transaction {
-  id: string;
-  investmentId: string;
-  type: 'BUY' | 'SELL' | 'DIVIDEND' | 'PAC_PAYMENT';
-  shares: number;
-  price: number;
-  amount: number;
-  fees: number;
-  date: string;
-  accountId?: string; // Link to Portfolio accounts
-}
+// ✅ IMPORT CORRETTI - Components (con I maiuscola)
+import PACSetupModal from "../components/Investments/PACSetupModal";
 
-const InvestmentsPage: React.FC = () => {
+export const InvestmentsPage: React.FC = () => {
   const { isDarkMode } = useTheme();
   const { addToast } = useToast();
+  
+  // ✅ UTILIZZO HOOKS - State management
+  const {
+    investments,
+    transactions,
+    pacPlans,
+    portfolio,
+    loading,
+    filteredInvestments,
+    addInvestment,
+    createPACPlan,
+    updatePACPlan,
+    pausePACPlan,
+    resumePACPlan,
+    deletePACPlan,
+    executePACPayment
+  } = useInvestmentData();
 
-  // States
-  const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | 'ALL'>('ALL');
-  const [showValues, setShowValues] = useState(true);
-  const [selectedView, setSelectedView] = useState<'overview' | 'detailed' | 'transactions'>('overview');
+  // ✅ UTILIZZO HOOKS - Real-time prices
+  const {
+    subscribeTo,
+    getPriceForSymbol,
+    isMarketOpen,
+    marketStatus,
+    isConnected
+  } = useRealTimePrices();
 
-  // Theme colors matching other pages
-  const getThemeColors = () => {
-    if (isDarkMode) {
-      return {
-        background: {
-          primary: "bg-gray-900",
-          card: "bg-gray-800",
-          cardHover: "hover:bg-gray-700",
-          secondary: "bg-gray-700",
-          glass: "bg-gray-800/60 backdrop-blur-sm"
-        },
-        text: {
-          primary: "text-gray-50",
-          secondary: "text-gray-300",
-          muted: "text-gray-400",
-          subtle: "text-gray-500"
-        },
-        border: {
-          main: "border-gray-700",
-          card: "border-gray-700",
-          cardHover: "hover:border-gray-600"
-        },
-        accent: {
-          primary: "#6366F1",
-          secondary: "#10B981", 
-          amber: "#F59E0B",
-          gradient: "from-indigo-500 via-purple-500 to-teal-400"
-        }
-      };
-    } else {
-      return {
-        background: {
-          primary: "bg-white",
-          card: "bg-white",
-          cardHover: "hover:bg-gray-50",
-          secondary: "bg-gray-100",
-          glass: "bg-white/60 backdrop-blur-sm"
-        },
-        text: {
-          primary: "text-gray-900",
-          secondary: "text-gray-700",
-          muted: "text-gray-600",
-          subtle: "text-gray-500"
-        },
-        border: {
-          main: "border-gray-200",
-          card: "border-gray-200",
-          cardHover: "hover:border-gray-300"
-        },
-        accent: {
-          primary: "#6366F1",
-          secondary: "#10B981",
-          amber: "#F59E0B",
-          gradient: "from-indigo-500 via-purple-500 to-teal-400"
-        }
-      };
-    }
-  };
+  // ✅ UTILIZZO HOOKS - Portfolio calculations
+  const {
+    analytics,
+    rebalancingAnalysis,
+    diversificationAnalysis,
+    calculating
+  } = usePortfolioCalculations(investments, transactions, pacPlans);
+
+  // Local state per UI
+  const [selectedTab, setSelectedTab] = useState<'investments' | 'pac' | 'analytics'>('investments');
+  const [filterAssetClass, setFilterAssetClass] = useState<AssetClass | 'ALL'>('ALL');
+  const [isPacModalOpen, setIsPacModalOpen] = useState(false);
+  const [editingPac, setEditingPac] = useState<PACPlan | undefined>();
+
+  // ✅ THEME COLORS - Design System
+  const getThemeColors = () => ({
+    background: {
+      primary: isDarkMode ? "bg-[#0A0B0F]" : "bg-[#FEFEFE]",
+      card: isDarkMode ? "bg-[#161920]" : "bg-[#F8FAFC]", 
+      secondary: isDarkMode ? "bg-[#1F2937]" : "bg-[#F1F5F9]"
+    },
+    text: {
+      primary: isDarkMode ? "text-[#F9FAFB]" : "text-[#0F172A]",
+      secondary: isDarkMode ? "text-[#D1D5DB]" : "text-[#334155]", 
+      muted: isDarkMode ? "text-[#6B7280]" : "text-[#64748B]"
+    },
+    border: isDarkMode ? "border-[#374151]" : "border-[#E2E8F0]",
+    hover: isDarkMode ? "hover:bg-[#1F2937]" : "hover:bg-[#F1F5F9]"
+  });
 
   const theme = getThemeColors();
 
-  // Mock data - realistic investment portfolio
-  const [investments] = useState<Investment[]>([
-    {
-      id: "1",
-      name: "VWCE - Vanguard FTSE All-World",
-      symbol: "VWCE.DE",
-      assetClass: "ETF",
-      type: "PAC",
-      currentPrice: 89.45,
-      previousClose: 88.92,
-      dayChange: 0.53,
-      dayChangePercent: 0.60,
-      currency: "EUR",
-      lastUpdated: new Date().toISOString(),
-      shares: 84.2,
-      avgBuyPrice: 78.50,
-      totalInvested: 6610,
-      currentValue: 7534,
-      monthlyAmount: 300,
-      nextPayment: "2025-10-01",
-      country: "Global",
-      isin: "IE00BK5BQT80",
-      totalReturn: 924,
-      totalReturnPercent: 13.98,
-      portfolioWeight: 45.2
-    },
-    {
-      id: "2",
-      name: "Apple Inc",
-      symbol: "AAPL",
-      assetClass: "STOCKS",
-      type: "SINGLE_PURCHASE",
-      currentPrice: 175.43,
-      previousClose: 174.20,
-      dayChange: 1.23,
-      dayChangePercent: 0.71,
-      currency: "USD",
-      lastUpdated: new Date().toISOString(),
-      shares: 15,
-      avgBuyPrice: 158.30,
-      totalInvested: 2374.50,
-      currentValue: 2631.45,
-      sector: "Technology",
-      country: "USA",
-      totalReturn: 256.95,
-      totalReturnPercent: 10.83,
-      portfolioWeight: 15.8
-    },
-    {
-      id: "3",
-      name: "iShares Core Global Aggregate Bond",
-      symbol: "AGGH.L",
-      assetClass: "BONDS",
-      type: "SINGLE_PURCHASE",
-      currentPrice: 52.80,
-      previousClose: 52.75,
-      dayChange: 0.05,
-      dayChangePercent: 0.09,
-      currency: "GBP",
-      lastUpdated: new Date().toISOString(),
-      shares: 45,
-      avgBuyPrice: 54.20,
-      totalInvested: 2439,
-      currentValue: 2376,
-      country: "Global",
-      isin: "IE00B3F81409",
-      totalReturn: -63,
-      totalReturnPercent: -2.58,
-      portfolioWeight: 14.3
-    },
-    {
-      id: "4",
-      name: "SPDR Gold Trust",
-      symbol: "GLD",
-      assetClass: "COMMODITIES",
-      type: "SINGLE_PURCHASE",
-      currentPrice: 185.20,
-      previousClose: 184.85,
-      dayChange: 0.35,
-      dayChangePercent: 0.19,
-      currency: "USD",
-      lastUpdated: new Date().toISOString(),
-      shares: 8,
-      avgBuyPrice: 178.45,
-      totalInvested: 1427.60,
-      currentValue: 1481.60,
-      country: "Global",
-      totalReturn: 54,
-      totalReturnPercent: 3.78,
-      portfolioWeight: 8.9
-    },
-    {
-      id: "5",
-      name: "Realty Income Corporation",
-      symbol: "O",
-      assetClass: "REAL_ESTATE",
-      type: "DIVIDEND_STOCK",
-      currentPrice: 58.75,
-      previousClose: 58.90,
-      dayChange: -0.15,
-      dayChangePercent: -0.25,
-      currency: "USD",
-      lastUpdated: new Date().toISOString(),
-      shares: 35,
-      avgBuyPrice: 55.20,
-      totalInvested: 1932,
-      currentValue: 2056.25,
-      sector: "Real Estate",
-      country: "USA",
-      totalReturn: 124.25,
-      totalReturnPercent: 6.43,
-      portfolioWeight: 12.4
-    },
-    {
-      id: "6",
-      name: "Bitcoin",
-      symbol: "BTC-USD",
-      assetClass: "CRYPTO",
-      type: "SINGLE_PURCHASE",
-      currentPrice: 42350,
-      previousClose: 41890,
-      dayChange: 460,
-      dayChangePercent: 1.10,
-      currency: "USD",
-      lastUpdated: new Date().toISOString(),
-      shares: 0.075,
-      avgBuyPrice: 38200,
-      totalInvested: 2865,
-      currentValue: 3176.25,
-      country: "Global",
-      totalReturn: 311.25,
-      totalReturnPercent: 10.86,
-      portfolioWeight: 3.4
+  // ✅ EFFETTI - Subscribe to price updates
+  useEffect(() => {
+    if (investments.length > 0) {
+      const symbols = investments.map(inv => inv.symbol);
+      subscribeTo(symbols);
     }
-  ]);
+  }, [investments, subscribeTo]);
 
-  // Calculated totals
-  const totalPortfolioValue = investments.reduce((sum, inv) => sum + inv.currentValue, 0);
-  const totalInvested = investments.reduce((sum, inv) => sum + inv.totalInvested, 0);
-  const totalProfit = totalPortfolioValue - totalInvested;
-  const totalReturnPercent = (totalProfit / totalInvested) * 100;
-  const activePACs = investments.filter(inv => inv.type === 'PAC').length;
-  const monthlyPACAmount = investments.filter(inv => inv.type === 'PAC').reduce((sum, inv) => sum + (inv.monthlyAmount || 0), 0);
-
-  // Asset class breakdown
-  const assetBreakdown = investments.reduce((acc, inv) => {
-    acc[inv.assetClass] = (acc[inv.assetClass] || 0) + inv.currentValue;
-    return acc;
-  }, {} as Record<AssetClass, number>);
-
-
-  // Utility functions
-  const formatCurrency = (amount: number, currency = 'EUR') => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
+  // ✅ HANDLERS
+  const handlePacSave = async (pac: PACPlan) => {
+    // Assegna investmentId se non presente (per PAC nuovi)
+    if (!pac.investmentId && pac.investmentSymbol) {
+      const matchingInvestment = investments.find(inv => inv.symbol === pac.investmentSymbol);
+      if (matchingInvestment) {
+        pac.investmentId = matchingInvestment.id;
+      }
+    }
+    
+    const success = await createPACPlan(pac);
+    if (success) {
+      setIsPacModalOpen(false);
+      setEditingPac(undefined);
+    }
   };
 
-  const formatPercentage = (value: number) => {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
+  const handleExecutePAC = async (planId: string) => {
+    await executePACPayment(planId);
   };
 
-  const getAssetClassLabel = (assetClass: AssetClass) => {
-    const labels = {
-      'STOCKS': 'Azioni',
-      'ETF': 'ETF',
-      'BONDS': 'Obbligazioni',
-      'COMMODITIES': 'Materie Prime',
-      'REAL_ESTATE': 'Immobiliare',
-      'CRYPTO': 'Criptovalute',
-      'ALTERNATIVE': 'Alternativi'
-    };
-    return labels[assetClass];
+  const handlePausePAC = async (planId: string) => {
+    await pausePACPlan(planId);
   };
 
-  const getAssetClassColor = (assetClass: AssetClass) => {
-    const colors = {
-      'STOCKS': '#6366F1',
-      'ETF': '#10B981', 
-      'BONDS': '#F59E0B',
-      'COMMODITIES': '#EF4444',
-      'REAL_ESTATE': '#8B5CF6',
-      'CRYPTO': '#F97316',
-      'ALTERNATIVE': '#06B6D4'
-    };
-    return colors[assetClass];
+  const handleResumePAC = async (planId: string) => {
+    await resumePACPlan(planId);
   };
 
-  const filteredInvestments = selectedAssetClass === 'ALL' 
-    ? investments 
-    : investments.filter(inv => inv.assetClass === selectedAssetClass);
+  // ✅ FILTERED DATA
+  const displayedInvestments = filterAssetClass === 'ALL' 
+    ? filteredInvestments 
+    : filteredInvestments.filter(inv => inv.assetClass === filterAssetClass);
+
+  const activePacPlans = pacPlans.filter(pac => pac.isActive && !pac.isPaused);
+  const pausedPacPlans = pacPlans.filter(pac => pac.isPaused);
+
+  if (loading) {
+    return (
+      <div className={`min-h-screen ${theme.background.primary} flex items-center justify-center`}>
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className={theme.text.muted}>Caricamento investimenti...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`min-h-screen ${theme.background.primary} ${theme.text.primary} transition-colors duration-300`}>
-      <div className="w-full h-full p-4 md:p-6 space-y-6">
-        
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-2">
-            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 bg-clip-text text-transparent leading-tight">
-              Portfolio Investimenti
+    <div className={`min-h-screen ${theme.background.primary} p-4 md:p-6`}>
+      
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className={`text-2xl md:text-3xl font-bold ${theme.text.primary}`}>
+              Investimenti
             </h1>
-            <p className={`${theme.text.muted} text-sm leading-relaxed`}>
-              Gestisci e monitora tutti i tuoi investimenti
+            <p className={`${theme.text.muted} text-sm md:text-base mt-1`}>
+              Gestisci il tuo portafoglio e piani di accumulo
             </p>
           </div>
-          
+
+          {/* Market Status & Actions */}
           <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${theme.background.secondary}`}>
+              <div className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className={`${theme.text.muted} text-sm`}>
+                {marketStatus.isOpen ? 'Mercati Aperti' : 'Mercati Chiusi'}
+              </span>
+            </div>
+            
             <button
-              onClick={() => setShowValues(!showValues)}
-              className={`p-2 ${theme.background.card} ${theme.border.card} border rounded-lg ${theme.background.cardHover} transition-all`}
+              onClick={() => {
+                setEditingPac(undefined);
+                setIsPacModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] text-white rounded-lg hover:from-[#059669] hover:to-[#047857] transition-all font-medium"
             >
-              {showValues ? '👁️' : '🙈'}
-            </button>
-            <button className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 px-4 py-2 rounded-xl font-semibold text-white transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" />
-              Nuovo Investimento
+              Nuovo PAC
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <div className="flex items-center justify-between mb-2">
-              <Wallet className="w-5 h-5 text-emerald-400" />
-              <span className={`text-xs ${theme.text.muted} font-medium`}>Portafoglio</span>
-            </div>
-            <div className="space-y-1">
-              <div className={`text-lg md:text-xl font-bold ${theme.text.primary}`}>
-                {showValues ? formatCurrency(totalPortfolioValue) : "••••••"}
+      {/* Portfolio Summary Cards */}
+      {analytics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] rounded-lg">
+                <Wallet className="w-5 h-5 text-white" />
               </div>
-              <div className={`text-xs ${totalReturnPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {formatPercentage(totalReturnPercent)}
-              </div>
-            </div>
-          </div>
-
-          <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <div className="flex items-center justify-between mb-2">
-              <TrendingUp className="w-5 h-5 text-blue-400" />
-              <span className={`text-xs ${theme.text.muted} font-medium`}>Investito</span>
-            </div>
-            <div className="space-y-1">
-              <div className={`text-lg md:text-xl font-bold ${theme.text.primary}`}>
-                {showValues ? formatCurrency(totalInvested) : "••••••"}
+              <div>
+                <p className={`${theme.text.muted} text-sm`}>Valore Totale</p>
+                <p className={`${theme.text.primary} text-lg font-semibold`}>
+                  {formatCurrency(analytics.totalValue)}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <div className="flex items-center justify-between mb-2">
-              {totalProfit >= 0 ? (
-                <TrendingUp className="w-5 h-5 text-emerald-400" />
-              ) : (
-                <TrendingDown className="w-5 h-5 text-red-400" />
-              )}
-              <span className={`text-xs ${theme.text.muted} font-medium`}>P&L</span>
-            </div>
-            <div className="space-y-1">
-              <div className={`text-lg md:text-xl font-bold ${totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {showValues ? formatCurrency(totalProfit) : "••••••"}
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-lg">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className={`${theme.text.muted} text-sm`}>Rendimento Totale</p>
+                <p className={`${theme.text.primary} text-lg font-semibold`}>
+                  {formatPercentage(analytics.totalReturnPercent)}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <div className="flex items-center justify-between mb-2">
-              <History className="w-5 h-5 text-purple-400" />
-              <span className={`text-xs ${theme.text.muted} font-medium`}>PAC Attivi</span>
-            </div>
-            <div className="space-y-1">
-              <div className={`text-lg md:text-xl font-bold ${theme.text.primary}`}>
-                {showValues ? formatCurrency(monthlyPACAmount) : "••••••"}
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] rounded-lg">
+                <Target className="w-5 h-5 text-white" />
               </div>
-              <div className={`text-xs ${theme.text.muted}`}>
-                {activePACs} piani attivi
+              <div>
+                <p className={`${theme.text.muted} text-sm`}>PAC Attivi</p>
+                <p className={`${theme.text.primary} text-lg font-semibold`}>
+                  {activePacPlans.length}
+                </p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* View Toggles */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex gap-2">
-            {['overview', 'detailed', 'transactions'].map((view) => (
-              <button
-                key={view}
-                onClick={() => setSelectedView(view as 'overview' | 'detailed' | 'transactions')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  selectedView === view 
-                    ? 'bg-indigo-600 text-white shadow-lg' 
-                    : `${theme.background.card} ${theme.text.secondary} hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-200/50`
-                }`}
-              >
-                {view === 'overview' ? 'Panoramica' : view === 'detailed' ? 'Dettagli' : 'Transazioni'}
-              </button>
-            ))}
-          </div>
-
-          {/* Asset Class Filters */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedAssetClass('ALL')}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                selectedAssetClass === 'ALL' 
-                  ? 'bg-gray-600 text-white' 
-                  : `${theme.background.card} ${theme.text.muted} hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-200/50`
-              }`}
-            >
-              Tutti ({investments.length})
-            </button>
-            {Object.keys(assetBreakdown).map((assetClass) => (
-              <button
-                key={assetClass}
-                onClick={() => setSelectedAssetClass(assetClass as AssetClass)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                  selectedAssetClass === assetClass 
-                    ? 'text-white' 
-                    : `${theme.background.card} ${theme.text.muted} hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-200/50`
-                }`}
-                style={{
-                  backgroundColor: selectedAssetClass === assetClass ? getAssetClassColor(assetClass as AssetClass) : undefined
-                }}
-              >
-                {getAssetClassLabel(assetClass as AssetClass)} ({investments.filter(inv => inv.assetClass === assetClass).length})
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          
-          {/* Performance Chart Placeholder */}
-          <div className={`xl:col-span-2 ${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-lg shadow-emerald-500/25">
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-[#EF4444] to-[#DC2626] rounded-lg">
                 <BarChart3 className="w-5 h-5 text-white" />
               </div>
-              <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Performance Portfolio</h3>
-            </div>
-            <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-600 rounded-lg">
-              <p className={`${theme.text.muted} text-sm`}>Grafico Performance (Coming Soon)</p>
-            </div>
-          </div>
-
-          {/* Asset Allocation */}
-          <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg shadow-purple-500/25">
-                <PieChart className="w-5 h-5 text-white" />
+              <div>
+                <p className={`${theme.text.muted} text-sm`}>Rischio Portfolio</p>
+                <p className={`${theme.text.primary} text-lg font-semibold`}>
+                  {analytics.riskLevel}
+                </p>
               </div>
-              <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Asset Allocation</h3>
-            </div>
-            <div className="space-y-3">
-              {Object.entries(assetBreakdown).map(([assetClass, value]) => {
-                const percentage = ((value / totalPortfolioValue) * 100).toFixed(1);
-                return (
-                  <div key={assetClass} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
-                        style={{ backgroundColor: getAssetClassColor(assetClass as AssetClass) }}
-                      ></div>
-                      <span className={`${theme.text.secondary} text-sm`}>
-                        {getAssetClassLabel(assetClass as AssetClass)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div className={`${theme.text.primary} font-semibold text-sm`}>{percentage}%</div>
-                      <div className={`${theme.text.muted} text-xs`}>
-                        {showValues ? formatCurrency(value) : "••••"}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Investments List */}
-        <div className="space-y-3">
-          {filteredInvestments.map((investment) => (
-            <div 
-              key={investment.id} 
-              className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 group`}
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        {[
+          { key: 'investments', label: 'Investimenti', icon: TrendingUp },
+          { key: 'pac', label: 'Piani PAC', icon: Target },
+          { key: 'analytics', label: 'Analytics', icon: BarChart3 }
+        ].map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setSelectedTab(key as any)}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+              selectedTab === key
+                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {selectedTab === 'investments' && (
+        <div className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={filterAssetClass}
+              onChange={(e) => setFilterAssetClass(e.target.value as any)}
+              className={`px-3 py-2 rounded-lg ${theme.background.secondary} ${theme.text.primary} border ${theme.border}`}
             >
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                
-                {/* Investment Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div 
-                      className="px-2 py-1 rounded-full text-xs font-medium text-white"
-                      style={{ backgroundColor: getAssetClassColor(investment.assetClass) }}
-                    >
-                      {getAssetClassLabel(investment.assetClass)}
+              <option value="ALL">Tutte le Asset Class</option>
+              {Object.values(AssetClass).map(assetClass => (
+                <option key={assetClass} value={assetClass}>
+                  {ASSET_CLASS_LABELS[assetClass]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Investments List */}
+          <div className="grid gap-4">
+            {displayedInvestments.map(investment => (
+              <div key={investment.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className={`${theme.text.primary} font-semibold`}>{investment.name}</h3>
+                      <span className={`text-xs px-2 py-1 rounded ${theme.background.secondary} ${theme.text.muted}`}>
+                        {investment.symbol}
+                      </span>
+                      {isMarketOpen(investment.symbol) && (
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-green-500">Live</span>
+                        </div>
+                      )}
                     </div>
-                    {investment.type === 'PAC' && (
-                      <div className="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                        PAC
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className={`${theme.text.muted} text-xs`}>Valore Corrente</p>
+                        <p className={`${theme.text.primary} font-medium`}>
+                          {formatCurrency(investment.currentValue)}
+                        </p>
                       </div>
-                    )}
-                    <h3 className={`font-semibold ${theme.text.primary}`}>
-                      {investment.name}
-                    </h3>
-                    <span className={`${theme.text.muted} text-sm`}>
-                      {investment.symbol}
-                    </span>
+                      <div>
+                        <p className={`${theme.text.muted} text-xs`}>Rendimento</p>
+                        <p className={`font-medium ${
+                          investment.totalReturnPercent >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {formatPercentage(investment.totalReturnPercent)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`${theme.text.muted} text-xs`}>Prezzo</p>
+                        <p className={`${theme.text.primary} font-medium`}>
+                          {formatCurrency(investment.currentPrice, investment.currency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`${theme.text.muted} text-xs`}>Azioni</p>
+                        <p className={`${theme.text.primary} font-medium`}>
+                          {investment.shares.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selectedTab === 'pac' && (
+        <div className="space-y-6">
+          {/* Active PACs */}
+          <div>
+            <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>PAC Attivi</h3>
+            <div className="grid gap-4">
+              {activePacPlans.map(pac => (
+                <div key={pac.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className={`${theme.text.primary} font-medium`}>{pac.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleExecutePAC(pac.id)}
+                        className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                        title="Esegui versamento"
+                      >
+                        <Play className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handlePausePAC(pac.id)}
+                        className="p-2 text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                        title="Pausa PAC"
+                      >
+                        <Pause className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingPac(pac);
+                          setIsPacModalOpen(true);
+                        }}
+                        className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Modifica PAC"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   
-                  {selectedView === 'detailed' && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-3">
-                      <div>
-                        <span className={`${theme.text.muted} block`}>Quantità</span>
-                        <span className={`${theme.text.primary} font-medium`}>
-                          {investment.shares.toFixed(investment.assetClass === 'CRYPTO' ? 6 : 2)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className={`${theme.text.muted} block`}>Prezzo Medio</span>
-                        <span className={`${theme.text.primary} font-medium`}>
-                          {showValues ? formatCurrency(investment.avgBuyPrice, investment.currency) : "••••"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className={`${theme.text.muted} block`}>Prezzo Attuale</span>
-                        <span className={`${theme.text.primary} font-medium`}>
-                          {showValues ? formatCurrency(investment.currentPrice, investment.currency) : "••••"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className={`${theme.text.muted} block`}>Peso Portfolio</span>
-                        <span className={`${theme.text.primary} font-medium`}>
-                          {investment.portfolioWeight.toFixed(1)}%
-                        </span>
-                      </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className={`${theme.text.muted} text-xs`}>Importo Mensile</p>
+                      <p className={`${theme.text.primary} font-medium`}>
+                        {formatCurrency(pac.monthlyAmount)}
+                      </p>
                     </div>
-                  )}
-                </div>
-
-                {/* Performance */}
-                <div className="flex justify-between lg:flex-col lg:items-end gap-2 lg:gap-1 border-t lg:border-t-0 lg:border-l border-gray-700 pt-3 lg:pt-0 lg:pl-4">
-                  <div className="lg:text-right">
-                    <div className={`text-lg font-bold ${investment.totalReturnPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatPercentage(investment.totalReturnPercent)}
+                    <div>
+                      <p className={`${theme.text.muted} text-xs`}>Totale Investito</p>
+                      <p className={`${theme.text.primary} font-medium`}>
+                        {formatCurrency(pac.totalInvested)}
+                      </p>
                     </div>
-                    <div className={`text-sm ${investment.totalReturnPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {showValues ? formatCurrency(investment.totalReturn) : "••••"}
+                    <div>
+                      <p className={`${theme.text.muted} text-xs`}>Valore Corrente</p>
+                      <p className={`${theme.text.primary} font-medium`}>
+                        {formatCurrency(pac.currentValue)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`${theme.text.muted} text-xs`}>Prossimo Versamento</p>
+                      <p className={`${theme.text.primary} font-medium`}>
+                        {formatDate(pac.nextPaymentDate)}
+                      </p>
                     </div>
                   </div>
-                  <div className="lg:text-right">
-                    <div className={`text-sm ${theme.text.primary} font-semibold`}>
-                      {showValues ? formatCurrency(investment.currentValue) : "••••••"}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Paused PACs */}
+          {pausedPacPlans.length > 0 && (
+            <div>
+              <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>PAC in Pausa</h3>
+              <div className="grid gap-4">
+                {pausedPacPlans.map(pac => (
+                  <div key={pac.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border} opacity-75`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className={`${theme.text.primary} font-medium`}>{pac.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleResumePAC(pac.id)}
+                          className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                          title="Riprendi PAC"
+                        >
+                          <Play className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deletePACPlan(pac.id)}
+                          className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Elimina PAC"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className={`text-xs ${theme.text.muted}`}>
-                      su {showValues ? formatCurrency(investment.totalInvested) : "••••"}
+                    <p className={`${theme.text.muted} text-sm`}>
+                      PAC in pausa - {formatCurrency(pac.totalInvested)} investiti
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedTab === 'analytics' && analytics && (
+        <div className="space-y-6">
+          {/* Portfolio Analytics */}
+          <div className={`${theme.background.card} rounded-xl p-6 border ${theme.border}`}>
+            <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>Analisi Portfolio</h3>
+            
+            {/* Asset Allocation */}
+            <div className="mb-6">
+              <h4 className={`${theme.text.secondary} text-base font-medium mb-3`}>Allocazione Asset</h4>
+              <div className="space-y-2">
+                {analytics.assetAllocation.map(allocation => (
+                  <div key={allocation.assetClass} className="flex items-center justify-between">
+                    <span className={`${theme.text.primary} text-sm`}>
+                      {ASSET_CLASS_LABELS[allocation.assetClass]}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+                        <div 
+                          className="h-full bg-indigo-500 rounded-full" 
+                          style={{ width: `${allocation.percentage}%` }}
+                        />
+                      </div>
+                      <span className={`${theme.text.muted} text-sm w-12 text-right`}>
+                        {allocation.percentage.toFixed(1)}%
+                      </span>
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Risk Analysis */}
+            {diversificationAnalysis && (
+              <div>
+                <h4 className={`${theme.text.secondary} text-base font-medium mb-3`}>Analisi Diversificazione</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className={`${theme.text.muted} text-sm mb-1`}>Score Diversificazione</p>
+                    <p className={`${theme.text.primary} text-2xl font-bold`}>
+                      {diversificationAnalysis.score}/100
+                    </p>
+                    <p className={`text-sm ${
+                      diversificationAnalysis.level === 'EXCELLENT' ? 'text-green-600' :
+                      diversificationAnalysis.level === 'GOOD' ? 'text-blue-600' :
+                      diversificationAnalysis.level === 'FAIR' ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {diversificationAnalysis.level}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className={`${theme.text.muted} text-sm mb-2`}>Raccomandazioni</p>
+                    <ul className="space-y-1">
+                      {diversificationAnalysis.recommendations.slice(0, 2).map((rec, index) => (
+                        <li key={index} className={`${theme.text.primary} text-xs`}>
+                          • {rec}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredInvestments.length === 0 && (
-          <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-8 text-center`}>
-            <div className={`${theme.text.muted} text-lg mb-2`}>Nessun investimento trovato</div>
-            <div className={`${theme.text.subtle} text-sm`}>
-              {selectedAssetClass === 'ALL' 
-                ? 'Inizia aggiungendo il tuo primo investimento' 
-                : `Nessun investimento nella categoria ${getAssetClassLabel(selectedAssetClass as AssetClass)}`
-              }
-            </div>
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Rebalancing Analysis */}
+          {rebalancingAnalysis && rebalancingAnalysis.needsRebalancing && (
+            <div className={`${theme.background.card} rounded-xl p-6 border ${theme.border}`}>
+              <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>Suggerimenti Ribilanciamento</h3>
+              <div className="space-y-3">
+                {rebalancingAnalysis.suggestions
+                  .filter(s => s.action !== 'HOLD')
+                  .map(suggestion => (
+                  <div key={suggestion.assetClass} className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg">
+                    <div>
+                      <p className={`${theme.text.primary} font-medium`}>
+                        {ASSET_CLASS_LABELS[suggestion.assetClass]}
+                      </p>
+                      <p className={`${theme.text.muted} text-sm`}>
+                        {suggestion.action === 'BUY' ? 'Aumenta' : 'Riduci'} di {formatPercentage(Math.abs(suggestion.deviation))}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`${theme.text.primary} font-medium`}>
+                        {formatCurrency(suggestion.amount)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PAC Setup Modal */}
+      {isPacModalOpen && (
+        <PACSetupModal
+          pac={editingPac}
+          isNew={!editingPac}
+          onClose={() => {
+            setIsPacModalOpen(false);
+            setEditingPac(undefined);
+          }}
+          onSave={handlePacSave}
+        />
+      )}
     </div>
   );
 };
-
-export default InvestmentsPage;

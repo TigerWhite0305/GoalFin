@@ -2,30 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, Euro, Target, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
-
-export interface PACPlan {
-  id: string;
-  name: string;
-  investmentSymbol: string; // ISIN o ticker dell'ETF/azione
-  investmentName: string;
-  monthlyAmount: number;
-  startDate: string;
-  frequency: 'monthly' | 'quarterly' | 'biannual';
-  dayOfMonth: number; // Giorno del mese per l'esecuzione
-  isActive: boolean;
-  targetAmount?: number;
-  endDate?: string;
-  executedPayments: number;
-  totalInvested: number;
-  currentValue: number;
-  nextPaymentDate: string;
-}
+import { PACPlan, PACFrequency } from '../../utils/AssetTypes'; // ✅ IMPORT dal file types condiviso
 
 interface PACSetupModalProps {
   pac?: PACPlan;
   isNew: boolean;
   onClose: () => void;
-  onSave: (pac: PACPlan) => void;
+  onSave: (pac: PACPlan) => Promise<void>; // ✅ CORRETTO - async function
 }
 
 const PACSetupModal: React.FC<PACSetupModalProps> = ({ 
@@ -67,7 +50,7 @@ const PACSetupModal: React.FC<PACSetupModalProps> = ({
   const [investmentName, setInvestmentName] = useState(pac?.investmentName || '');
   const [monthlyAmount, setMonthlyAmount] = useState(pac?.monthlyAmount || 100);
   const [startDate, setStartDate] = useState(pac?.startDate || '');
-  const [frequency, setFrequency] = useState<'monthly' | 'quarterly' | 'biannual'>(pac?.frequency || 'monthly');
+  const [frequency, setFrequency] = useState<PACFrequency>(pac?.frequency || PACFrequency.MONTHLY); // ✅ USA ENUM
   const [dayOfMonth, setDayOfMonth] = useState(pac?.dayOfMonth || 1);
   const [hasTarget, setHasTarget] = useState(!!pac?.targetAmount);
   const [targetAmount, setTargetAmount] = useState(pac?.targetAmount || 10000);
@@ -78,9 +61,9 @@ const PACSetupModal: React.FC<PACSetupModalProps> = ({
   const [projectedTotal, setProjectedTotal] = useState(0);
 
   const frequencies = [
-    { value: 'monthly', label: 'Mensile', multiplier: 12 },
-    { value: 'quarterly', label: 'Trimestrale', multiplier: 4 },
-    { value: 'biannual', label: 'Semestrale', multiplier: 2 }
+    { value: PACFrequency.MONTHLY, label: 'Mensile', multiplier: 12 },
+    { value: PACFrequency.QUARTERLY, label: 'Trimestrale', multiplier: 4 },
+    { value: PACFrequency.BIANNUAL, label: 'Semestrale', multiplier: 2 }
   ];
 
   const popularETFs = [
@@ -107,7 +90,7 @@ const PACSetupModal: React.FC<PACSetupModalProps> = ({
     }
   }, [hasTarget, targetAmount, monthlyAmount, frequency, endDate, startDate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => { // ✅ ASYNC
     e.preventDefault();
     
     if (!name || !investmentSymbol || !startDate || monthlyAmount <= 0) {
@@ -118,29 +101,37 @@ const PACSetupModal: React.FC<PACSetupModalProps> = ({
     const newPAC: PACPlan = {
       id: pac?.id || Date.now().toString(),
       name,
+      investmentId: pac?.investmentId || '', // ✅ AGGIUNGO i campi mancanti
       investmentSymbol,
       investmentName,
       monthlyAmount,
-      startDate,
       frequency,
+      startDate,
+      endDate: hasTarget ? undefined : endDate,
+      targetAmount: hasTarget ? targetAmount : undefined,
       dayOfMonth,
       isActive: true,
-      targetAmount: hasTarget ? targetAmount : undefined,
-      endDate: hasTarget ? undefined : endDate,
+      isPaused: false, // ✅ AGGIUNGO
       executedPayments: pac?.executedPayments || 0,
       totalInvested: pac?.totalInvested || 0,
       currentValue: pac?.currentValue || 0,
-      nextPaymentDate: calculateNextPaymentDate(startDate, frequency, dayOfMonth)
+      nextPaymentDate: calculateNextPaymentDate(startDate, frequency, dayOfMonth),
+      lastPaymentDate: pac?.lastPaymentDate,
+      totalReturn: pac?.totalReturn || 0, // ✅ AGGIUNGO
+      totalReturnPercent: pac?.totalReturnPercent || 0, // ✅ AGGIUNGO
+      avgBuyPrice: pac?.avgBuyPrice || 0, // ✅ AGGIUNGO
+      createdAt: pac?.createdAt || new Date().toISOString(), // ✅ AGGIUNGO
+      updatedAt: new Date().toISOString() // ✅ AGGIUNGO
     };
 
-    onSave(newPAC);
+    await onSave(newPAC); // ✅ AWAIT
     addToast(
       isNew ? `PAC "${name}" creato con successo` : `PAC "${name}" modificato con successo`,
       'success'
     );
   };
 
-  const calculateNextPaymentDate = (start: string, freq: string, day: number): string => {
+  const calculateNextPaymentDate = (start: string, freq: PACFrequency, day: number): string => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -149,13 +140,13 @@ const PACSetupModal: React.FC<PACSetupModalProps> = ({
     
     if (nextDate <= now) {
       switch (freq) {
-        case 'monthly':
+        case PACFrequency.MONTHLY:
           nextDate.setMonth(nextDate.getMonth() + 1);
           break;
-        case 'quarterly':
+        case PACFrequency.QUARTERLY:
           nextDate.setMonth(nextDate.getMonth() + 3);
           break;
-        case 'biannual':
+        case PACFrequency.BIANNUAL:
           nextDate.setMonth(nextDate.getMonth() + 6);
           break;
       }
@@ -452,5 +443,4 @@ const PACSetupModal: React.FC<PACSetupModalProps> = ({
       </div>
     </div>
   );}
-
 export default PACSetupModal;
