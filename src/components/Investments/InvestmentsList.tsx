@@ -1,7 +1,7 @@
 import React from "react";
 import { useTheme } from "../../context/ThemeContext";
-import InvestmentCard from "./InvestmentCard";
-import { Investment, AssetClass } from "../types/InvestmentTypes";
+import InvestmentCard from "./InvestmentSummaryCards";
+import { Investment, AssetClass } from "../../utils/AssetTypes";
 
 interface InvestmentsListProps {
   investments: Investment[];
@@ -158,15 +158,23 @@ const InvestmentsList: React.FC<InvestmentsListProps> = ({
 
       {/* Investments Grid/List */}
       <div className="space-y-3">
-        {sortedInvestments.map((investment) => (
+        {sortedInvestments.map((investment: Investment) => (
           <InvestmentCard
             key={investment.id}
             investment={investment}
+            data={{
+              ...investment,
+              totalPortfolioValue: investment.currentValue,
+              totalProfit: investment.currentValue - investment.totalInvested,
+              activePACs: investment.type === 'PAC' ? 1 : 0,
+              monthlyPACAmount: investment.type === 'PAC' ? investment.totalInvested / 12 : 0
+            }}
             viewMode={selectedView}
             showValues={showValues}
             onEdit={() => onEditInvestment(investment)}
             onDelete={() => onDeleteInvestment(investment.id)}
-            onQuickAction={(action) => onQuickAction(investment.id, action)}
+            onQuickAction={(action: 'buy' | 'sell' | 'details') => onQuickAction(investment.id, action)}
+            onToggleValues={() => {}}
           />
         ))}
       </div>

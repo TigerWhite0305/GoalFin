@@ -1,6 +1,7 @@
 import React from "react";
 import { Wallet, TrendingUp, TrendingDown, History, Target, Eye, EyeOff, Calendar, DollarSign } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { Investment } from "../../utils/AssetTypes";
 
 interface SummaryData {
   totalPortfolioValue: number;
@@ -18,6 +19,12 @@ interface InvestmentSummaryCardsProps {
   data: SummaryData;
   showValues: boolean;
   onToggleValues: () => void;
+  investment: Investment;
+  viewMode: "overview" | "detailed" | "transactions"; // aggiungi questa riga
+  onEdit: (investment: Investment) => void;
+  onDelete: (investment: Investment) => void;
+  onQuickAction: (action: 'buy' | 'sell' | 'details') => void;
+  
 }
 
 const InvestmentSummaryCards: React.FC<InvestmentSummaryCardsProps> = ({ 

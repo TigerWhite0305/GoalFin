@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { MoreVertical, Edit, Trash2, TrendingUp, TrendingDown, Calendar, Target, ShoppingCart, DollarSign, Info } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
-import { Investment, AssetClass } from "../types/InvestmentTypes";
+import { Investment, AssetClass } from "../../utils/AssetTypes";
 
 interface InvestmentCardProps {
   investment: Investment;

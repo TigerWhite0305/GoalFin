@@ -1,7 +1,7 @@
 import React from "react";
 import { Filter, X } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
-import { AssetClass } from "../types/InvestmentTypes";
+import { AssetClass } from "../../utils/AssetTypes";
 
 interface AssetClassCounts {
   [key: string]: number;
@@ -123,6 +123,25 @@ const AssetClassFilter: React.FC<AssetClassFilterProps> = ({
     }
   ];
 
-  // Filter out categories with 0 investments (except ALL)
-  const availableFilters = assetClassConfigs.filter(config => 
-    config.key === '
+    // Filter out categories with 0 investments (except ALL)
+    const availableFilters = assetClassConfigs.filter(config => 
+      config.key === 'ALL' || config.count > 0
+    );
+  
+    return (
+      <div className={`p-4 ${theme.background.card} ${theme.border.main}`}>
+        {availableFilters.map(filter => (
+          <button
+            key={filter.key}
+            onClick={() => onFilterChange(filter.key as AssetClass | 'ALL')}
+            className={`flex items-center p-2 m-1 rounded ${theme.hover}`}
+            style={{ backgroundColor: filter.key !== 'ALL' ? filter.color : undefined }}
+          >
+            <span>{filter.icon}</span>
+            <span className="ml-2">{filter.label}</span>
+            <span className="ml-auto">{filter.count}</span>
+          </button>
+        ))}
+      </div>
+    );
+  };

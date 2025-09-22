@@ -275,6 +275,7 @@ const InvestmentsPage: React.FC = () => {
     return acc;
   }, {} as Record<AssetClass, number>);
 
+
   // Utility functions
   const formatCurrency = (amount: number, currency = 'EUR') => {
     return new Intl.NumberFormat('it-IT', {
@@ -336,7 +337,7 @@ const InvestmentsPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowValues(!showValues)}
-              className={`p-2 ${theme.background.card} ${theme.border.card} border rounded-lg ${theme.cardHover} transition-all`}
+              className={`p-2 ${theme.background.card} ${theme.border.card} border rounded-lg ${theme.background.cardHover} transition-all`}
             >
               {showValues ? '👁️' : '🙈'}
             </button>
@@ -414,7 +415,7 @@ const InvestmentsPage: React.FC = () => {
             {['overview', 'detailed', 'transactions'].map((view) => (
               <button
                 key={view}
-                onClick={() => setSelectedView(view as any)}
+                onClick={() => setSelectedView(view as 'overview' | 'detailed' | 'transactions')}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   selectedView === view 
                     ? 'bg-indigo-600 text-white shadow-lg' 
