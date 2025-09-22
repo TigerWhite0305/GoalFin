@@ -73,21 +73,64 @@ export const InvestmentsPage: React.FC = () => {
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false); // ✅ NUOVO
   const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(); // ✅ NUOVO
 
-  // ✅ THEME COLORS - Design System
-  const getThemeColors = () => ({
-    background: {
-      primary: isDarkMode ? "bg-[#0A0B0F]" : "bg-[#FEFEFE]",
-      card: isDarkMode ? "bg-[#161920]" : "bg-[#F8FAFC]", 
-      secondary: isDarkMode ? "bg-[#1F2937]" : "bg-[#F1F5F9]"
-    },
-    text: {
-      primary: isDarkMode ? "text-[#F9FAFB]" : "text-[#0F172A]",
-      secondary: isDarkMode ? "text-[#D1D5DB]" : "text-[#334155]", 
-      muted: isDarkMode ? "text-[#6B7280]" : "text-[#64748B]"
-    },
-    border: isDarkMode ? "border-[#374151]" : "border-[#E2E8F0]",
-    hover: isDarkMode ? "hover:bg-[#1F2937]" : "hover:bg-[#F1F5F9]"
-  });
+  // ✅ THEME COLORS - Design System GoalFin Corretto
+  const getThemeColors = () => {
+    if (isDarkMode) {
+      return {
+        // 🌙 Tema Scuro (Design System GoalFin)
+        background: {
+          primary: "bg-gray-900", // #0A0B0F
+          card: "bg-gray-800", // #161920
+          secondary: "bg-gray-700", // #1F2937
+          input: "bg-gray-800/50"
+        },
+        text: {
+          primary: "text-gray-50", // #F9FAFB
+          secondary: "text-gray-300", // #D1D5DB
+          muted: "text-gray-400", // #6B7280
+          subtle: "text-gray-500" // #9CA3AF
+        },
+        colors: {
+          indigo: "#6366F1", // Accent Primary: #6366F1
+          emerald: "#10B981", // Accent Secondary: #10B981
+          amber: "#F59E0B", // Accent: #F59E0B
+          success: "#059669", // Success: #059669
+          error: "#DC2626", // Error: #DC2626
+          warning: "#D97706", // Warning: #D97706
+          info: "#0284C7" // Info: #0284C7
+        },
+        border: "border-gray-700/30",
+        hover: "hover:bg-gray-700/40"
+      };
+    } else {
+      return {
+        // ☀️ Tema Chiaro  
+        background: {
+          primary: "bg-white", // #FEFEFE
+          card: "bg-gray-50/60", // #F8FAFC
+          secondary: "bg-gray-100", // #F1F5F9
+          input: "bg-white/80"
+        },
+        text: {
+          primary: "text-gray-900", // #0F172A
+          secondary: "text-gray-700", // #334155
+          muted: "text-gray-600", // #64748B
+          subtle: "text-gray-500" // #94A3B8
+        },
+        colors: {
+          indigo: "#6366F1",
+          emerald: "#10B981", 
+          amber: "#F59E0B",
+          success: "#059669",
+          error: "#DC2626",
+          warning: "#D97706",
+          info: "#0284C7"
+        },
+        border: "border-gray-200/50",
+        hover: "hover:bg-gray-100/50"
+      };
+    }
+  };
 
   const theme = getThemeColors();
 
@@ -172,7 +215,7 @@ export const InvestmentsPage: React.FC = () => {
 
           {/* Market Status & Actions */}
           <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${theme.background.secondary}`}>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${theme.background.secondary} border ${theme.border}`}>
               <div className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
               <span className={`${theme.text.muted} text-sm`}>
                 {marketStatus.isOpen ? 'Mercati Aperti' : 'Mercati Chiusi'}
@@ -184,7 +227,7 @@ export const InvestmentsPage: React.FC = () => {
                 setEditingInvestment(undefined);
                 setIsInvestmentModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] text-white rounded-lg hover:from-[#5B5BF7] hover:to-[#7C3AED] transition-all font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all font-medium shadow-lg"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Acquista</span>
@@ -195,7 +238,7 @@ export const InvestmentsPage: React.FC = () => {
                 setEditingPac(undefined);
                 setIsPacModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] text-white rounded-lg hover:from-[#059669] hover:to-[#047857] transition-all font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all font-medium shadow-lg"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Nuovo PAC</span>
@@ -207,9 +250,9 @@ export const InvestmentsPage: React.FC = () => {
       {/* Portfolio Summary Cards */}
       {analytics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border} backdrop-blur-sm`}>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] rounded-lg">
+              <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -221,9 +264,9 @@ export const InvestmentsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border} backdrop-blur-sm`}>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-lg">
+              <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -235,9 +278,9 @@ export const InvestmentsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border} backdrop-blur-sm`}>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] rounded-lg">
+              <div className="p-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg">
                 <Target className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -249,9 +292,9 @@ export const InvestmentsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+          <div className={`${theme.background.card} rounded-xl p-4 border ${theme.border} backdrop-blur-sm`}>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-[#EF4444] to-[#DC2626] rounded-lg">
+              <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg">
                 <BarChart3 className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -266,7 +309,7 @@ export const InvestmentsPage: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+      <div className={`flex gap-1 mb-6 p-1 ${theme.background.secondary} rounded-lg border ${theme.border}`}>
         {[
           { key: 'investments', label: 'Investimenti', icon: TrendingUp },
           { key: 'pac', label: 'Piani PAC', icon: Target },
@@ -277,8 +320,8 @@ export const InvestmentsPage: React.FC = () => {
             onClick={() => setSelectedTab(key as any)}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${
               selectedTab === key
-                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? `${theme.background.card} text-indigo-500 shadow-sm border ${theme.border}`
+                : `${theme.text.muted} ${theme.hover}`
             }`}
           >
             <Icon className="w-4 h-4" />
@@ -295,7 +338,7 @@ export const InvestmentsPage: React.FC = () => {
             <select
               value={filterAssetClass}
               onChange={(e) => setFilterAssetClass(e.target.value as any)}
-              className={`px-3 py-2 rounded-lg ${theme.background.secondary} ${theme.text.primary} border ${theme.border}`}
+              className={`px-3 py-2 rounded-lg ${theme.background.input} ${theme.text.primary} border ${theme.border} focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
             >
               <option value="ALL">Tutte le Asset Class</option>
               {Object.values(AssetClass).map(assetClass => (
@@ -309,12 +352,12 @@ export const InvestmentsPage: React.FC = () => {
           {/* Investments List */}
           <div className="grid gap-4">
             {displayedInvestments.map(investment => (
-              <div key={investment.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+              <div key={investment.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border} backdrop-blur-sm ${theme.hover} transition-all`}>
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className={`${theme.text.primary} font-semibold`}>{investment.name}</h3>
-                      <span className={`text-xs px-2 py-1 rounded ${theme.background.secondary} ${theme.text.muted}`}>
+                      <span className={`text-xs px-2 py-1 rounded ${theme.background.secondary} ${theme.text.muted} border ${theme.border}`}>
                         {investment.symbol}
                       </span>
                       {isMarketOpen(investment.symbol) && (
@@ -335,7 +378,7 @@ export const InvestmentsPage: React.FC = () => {
                       <div>
                         <p className={`${theme.text.muted} text-xs`}>Rendimento</p>
                         <p className={`font-medium ${
-                          investment.totalReturnPercent >= 0 ? 'text-green-600' : 'text-red-600'
+                          investment.totalReturnPercent >= 0 ? 'text-emerald-500' : 'text-red-500'
                         }`}>
                           {formatPercentage(investment.totalReturnPercent)}
                         </p>
@@ -368,20 +411,20 @@ export const InvestmentsPage: React.FC = () => {
             <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>PAC Attivi</h3>
             <div className="grid gap-4">
               {activePacPlans.map(pac => (
-                <div key={pac.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border}`}>
+                <div key={pac.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border} backdrop-blur-sm`}>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className={`${theme.text.primary} font-medium`}>{pac.name}</h4>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleExecutePAC(pac.id)}
-                        className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                        className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
                         title="Esegui versamento"
                       >
                         <Play className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handlePausePAC(pac.id)}
-                        className="p-2 text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                        className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
                         title="Pausa PAC"
                       >
                         <Pause className="w-4 h-4" />
@@ -391,7 +434,7 @@ export const InvestmentsPage: React.FC = () => {
                           setEditingPac(pac);
                           setIsPacModalOpen(true);
                         }}
-                        className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
                         title="Modifica PAC"
                       >
                         <Edit className="w-4 h-4" />
@@ -436,20 +479,20 @@ export const InvestmentsPage: React.FC = () => {
               <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>PAC in Pausa</h3>
               <div className="grid gap-4">
                 {pausedPacPlans.map(pac => (
-                  <div key={pac.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border} opacity-75`}>
+                  <div key={pac.id} className={`${theme.background.card} rounded-xl p-4 border ${theme.border} backdrop-blur-sm opacity-75`}>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className={`${theme.text.primary} font-medium`}>{pac.name}</h4>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleResumePAC(pac.id)}
-                          className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                          className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
                           title="Riprendi PAC"
                         >
                           <Play className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => deletePACPlan(pac.id)}
-                          className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                           title="Elimina PAC"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -470,7 +513,7 @@ export const InvestmentsPage: React.FC = () => {
       {selectedTab === 'analytics' && analytics && (
         <div className="space-y-6">
           {/* Portfolio Analytics */}
-          <div className={`${theme.background.card} rounded-xl p-6 border ${theme.border}`}>
+          <div className={`${theme.background.card} rounded-xl p-6 border ${theme.border} backdrop-blur-sm`}>
             <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>Analisi Portfolio</h3>
             
             {/* Asset Allocation */}
@@ -483,9 +526,9 @@ export const InvestmentsPage: React.FC = () => {
                       {ASSET_CLASS_LABELS[allocation.assetClass]}
                     </span>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+                      <div className={`w-20 h-2 ${theme.background.secondary} rounded-full`}>
                         <div 
-                          className="h-full bg-indigo-500 rounded-full" 
+                          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" 
                           style={{ width: `${allocation.percentage}%` }}
                         />
                       </div>
@@ -509,9 +552,9 @@ export const InvestmentsPage: React.FC = () => {
                       {diversificationAnalysis.score}/100
                     </p>
                     <p className={`text-sm ${
-                      diversificationAnalysis.level === 'EXCELLENT' ? 'text-green-600' :
-                      diversificationAnalysis.level === 'GOOD' ? 'text-blue-600' :
-                      diversificationAnalysis.level === 'FAIR' ? 'text-yellow-600' : 'text-red-600'
+                      diversificationAnalysis.level === 'EXCELLENT' ? 'text-emerald-500' :
+                      diversificationAnalysis.level === 'GOOD' ? 'text-blue-500' :
+                      diversificationAnalysis.level === 'FAIR' ? 'text-amber-500' : 'text-red-500'
                     }`}>
                       {diversificationAnalysis.level}
                     </p>
@@ -534,13 +577,15 @@ export const InvestmentsPage: React.FC = () => {
 
           {/* Rebalancing Analysis */}
           {rebalancingAnalysis && rebalancingAnalysis.needsRebalancing && (
-            <div className={`${theme.background.card} rounded-xl p-6 border ${theme.border}`}>
+            <div className={`${theme.background.card} rounded-xl p-6 border ${theme.border} backdrop-blur-sm`}>
               <h3 className={`${theme.text.primary} text-lg font-semibold mb-4`}>Suggerimenti Ribilanciamento</h3>
               <div className="space-y-3">
                 {rebalancingAnalysis.suggestions
                   .filter(s => s.action !== 'HOLD')
                   .map(suggestion => (
-                  <div key={suggestion.assetClass} className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg">
+                  <div key={suggestion.assetClass} className={`flex items-center justify-between p-3 ${
+                    isDarkMode ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'
+                  } rounded-lg`}>
                     <div>
                       <p className={`${theme.text.primary} font-medium`}>
                         {ASSET_CLASS_LABELS[suggestion.assetClass]}

@@ -120,7 +120,7 @@ export const useInvestmentData = (): UseInvestmentDataReturn => {
       setPacPlans(mockDataSet.pacPlans);
       setPortfolio(mockDataSet.portfolio);
       
-      addToast('Dati investimenti caricati con successo', 'success');
+      // Rimosso toast di caricamento - non necessario
     } catch (err) {
       setError('Errore nel caricamento dei dati');
       addToast('Errore nel caricamento dei dati', 'error');

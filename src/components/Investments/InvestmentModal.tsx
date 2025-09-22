@@ -50,7 +50,7 @@ const InvestmentModal: React.FC<InvestmentModalProps> = ({
   // Theme colors
   const getThemeColors = () => ({
     background: {
-      primary: isDarkMode ? "bg-[#0A0B0F]" : "bg-[#FEFEFE]",
+      primary: isDarkMode ? "bg-gray-800" : "bg-[#FEFEFE]",
       card: isDarkMode ? "bg-[#161920]" : "bg-[#F8FAFC]", 
       secondary: isDarkMode ? "bg-[#1F2937]" : "bg-[#F1F5F9]"
     },

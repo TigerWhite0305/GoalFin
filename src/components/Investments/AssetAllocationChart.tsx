@@ -32,22 +32,28 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
   const [showMenu, setShowMenu] = useState(false);
 
-  // Theme colors
+  // ✅ THEME COLORS - Design System GoalFin Corretto
   const getThemeColors = () => {
     if (isDarkMode) {
       return {
+        // 🌙 Tema Scuro (Design System GoalFin)
         background: {
-          card: "bg-gray-800",
-          menu: "bg-gray-700"
+          card: "bg-gray-800/40", // #161920 con opacity
+          menu: "bg-gray-700", // #1F2937
+          secondary: "bg-gray-700/30"
         },
         text: {
-          primary: "text-gray-50",
-          secondary: "text-gray-300",
-          muted: "text-gray-400"
+          primary: "text-gray-50", // #F9FAFB
+          secondary: "text-gray-300", // #D1D5DB
+          muted: "text-gray-400" // #6B7280
         },
         border: {
-          main: "border-gray-700",
-          menu: "border-gray-600"
+          main: "border-gray-700/30",
+          menu: "border-gray-600/30"
+        },
+        hover: {
+          menu: "hover:bg-gray-600/50",
+          card: "hover:bg-gray-700/30"
         },
         chart: {
           grid: "#374151",
@@ -56,18 +62,24 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
       };
     } else {
       return {
+        // ☀️ Tema Chiaro
         background: {
-          card: "bg-white",
-          menu: "bg-gray-50"
+          card: "bg-gray-50/60", // #F8FAFC con opacity
+          menu: "bg-white",
+          secondary: "bg-gray-100/50"
         },
         text: {
-          primary: "text-gray-900",
-          secondary: "text-gray-700",
-          muted: "text-gray-600"
+          primary: "text-gray-900", // #0F172A
+          secondary: "text-gray-700", // #334155
+          muted: "text-gray-600" // #64748B
         },
         border: {
-          main: "border-gray-200",
-          menu: "border-gray-300"
+          main: "border-gray-200/50",
+          menu: "border-gray-300/50"
+        },
+        hover: {
+          menu: "hover:bg-gray-100/50",
+          card: "hover:bg-gray-200/50"
         },
         chart: {
           grid: "#E5E7EB",
@@ -162,7 +174,7 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className={`${theme.background.card} ${theme.border.main} border rounded-xl p-3 shadow-xl backdrop-blur-sm`}>
+        <div className={`${theme.background.card} border ${theme.border.main} rounded-xl p-3 shadow-xl backdrop-blur-sm`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-lg">{data.icon}</span>
             <span className={`${theme.text.primary} font-medium`}>{data.name}</span>
@@ -190,7 +202,7 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
   };
 
   return (
-    <div className={`${theme.background.card} ${theme.border.main} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
+    <div className={`${theme.background.card} border ${theme.border.main} rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm`}>
       
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -217,7 +229,7 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className={`p-2 ${theme.text.muted} hover:text-gray-50 dark:hover:text-gray-50 light:hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-200/50`}
+            className={`p-2 ${theme.text.muted} ${theme.text.primary} transition-colors rounded-lg ${theme.hover.card}`}
           >
             <MoreVertical className="w-4 h-4" />
           </button>
@@ -225,13 +237,13 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
           {showMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-              <div className={`absolute top-10 right-0 z-50 w-36 ${theme.background.menu} ${theme.border.menu} border rounded-lg shadow-xl overflow-hidden`}>
+              <div className={`absolute top-10 right-0 z-50 w-36 ${theme.background.menu} border ${theme.border.menu} rounded-lg shadow-xl overflow-hidden backdrop-blur-sm`}>
                 <button
                   onClick={() => {
                     setChartType('pie');
                     setShowMenu(false);
                   }}
-                  className={`w-full px-3 py-2 text-left ${theme.text.secondary} hover:bg-gray-600/50 dark:hover:bg-gray-600/50 light:hover:bg-gray-200/50 transition-colors text-sm flex items-center gap-2`}
+                  className={`w-full px-3 py-2 text-left ${theme.text.secondary} ${theme.hover.menu} transition-colors text-sm flex items-center gap-2`}
                 >
                   <PieChartIcon className="w-4 h-4" />
                   Grafico Torta
@@ -241,7 +253,7 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
                     setChartType('bar');
                     setShowMenu(false);
                   }}
-                  className={`w-full px-3 py-2 text-left ${theme.text.secondary} hover:bg-gray-600/50 dark:hover:bg-gray-600/50 light:hover:bg-gray-200/50 transition-colors text-sm flex items-center gap-2`}
+                  className={`w-full px-3 py-2 text-left ${theme.text.secondary} ${theme.hover.menu} transition-colors text-sm flex items-center gap-2`}
                 >
                   <BarChart3 className="w-4 h-4" />
                   Grafico Barre
@@ -312,7 +324,7 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
             : null;
           
           return (
-            <div key={index} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-700/30 dark:hover:bg-gray-700/30 light:hover:bg-gray-100/50 transition-colors">
+            <div key={index} className={`flex items-center justify-between p-2 rounded-lg ${theme.hover.card} transition-colors`}>
               <div className="flex items-center gap-3 flex-1">
                 <div className="flex items-center gap-2">
                   <div 
@@ -357,7 +369,7 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({
       </div>
 
       {/* Risk Summary */}
-      <div className={`mt-4 pt-3 border-t border-gray-700/30 dark:border-gray-700/30 light:border-gray-200/30`}>
+      <div className={`mt-4 pt-3 border-t ${theme.border.main}`}>
         <div className="grid grid-cols-2 gap-4 text-xs">
           <div>
             <span className={`${theme.text.muted} block`}>Asset Classes</span>

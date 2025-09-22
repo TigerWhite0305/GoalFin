@@ -2,110 +2,51 @@ import React, { useState } from "react";
 import { TrendingUp, TrendingDown, Calendar, DollarSign, PieChart, Target, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
-// Importa il tuo ThemeContext esistente
+// Import del sistema investimenti
 import { useTheme } from "../../context/ThemeContext";
+import { useInvestmentData } from "../../hooks/useInvestmentData";
+import { useRealTimePrices } from "../../hooks/useRealTimePrices";
+import { 
+  ASSET_CLASS_LABELS,
+  INVESTMENT_TYPE_LABELS,
+  AssetClass,
+  InvestmentType 
+} from "../../utils/AssetTypes";
+import { 
+  formatCurrency, 
+  formatPercentage 
+} from "../../utils/InvestmentUtils";
 
-// Tipi
-type InvestmentType = "PAC_ETF" | "ETF_SINGOLO" | "AZIONE";
-
-type Investment = {
-  id: string;
-  name: string;
-  type: InvestmentType;
-  monthlyAmount?: number;
-  startDate?: string;
-  totalMonths?: number;
-  totalInvested: number;
-  currentValue: number;
-  shares?: number;
-  avgBuyPrice?: number;
-  currentPrice?: number;
-  ytdReturn?: number;
-  totalReturn: number;
-  isin?: string;
-  sector?: string;
-  ticker?: string;
-};
-
-const InvestmentsComponent: React.FC = () => {
+const InvestmentsDashboardComponent: React.FC = () => {
   const [selectedView, setSelectedView] = useState<'overview' | 'details'>('overview');
   const { isDarkMode } = useTheme();
+  
+  // ✅ UTILIZZO DATI REALI
+  const {
+    investments,
+    pacPlans,
+    loading
+  } = useInvestmentData();
 
-  const investments: Investment[] = [
-    {
-      id: "1",
-      name: "VWCE - Vanguard FTSE All-World",
-      type: "PAC_ETF",
-      monthlyAmount: 300,
-      startDate: "2023-01-01",
-      totalMonths: 20,
-      totalInvested: 6000,
-      currentValue: 6750,
-      shares: 75.5,
-      avgBuyPrice: 79.47,
-      currentPrice: 89.40,
-      ytdReturn: 8.2,
-      totalReturn: 12.5,
-      isin: "IE00BK5BQT80",
-      ticker: "VWCE"
-    },
-    {
-      id: "2", 
-      name: "SWDA - iShares Core MSCI World",
-      type: "PAC_ETF",
-      monthlyAmount: 200,
-      startDate: "2023-06-01",
-      totalMonths: 15,
-      totalInvested: 3000,
-      currentValue: 3240,
-      shares: 42.1,
-      avgBuyPrice: 71.26,
-      currentPrice: 76.95,
-      ytdReturn: 6.8,
-      totalReturn: 8.0,
-      isin: "IE00B4L5Y983",
-      ticker: "SWDA"
-    },
-    {
-      id: "3",
-      name: "Tesla Inc",
-      type: "AZIONE",
-      totalInvested: 2500,
-      currentValue: 2180,
-      shares: 12,
-      avgBuyPrice: 208.33,
-      currentPrice: 181.67,
-      ytdReturn: -15.2,
-      totalReturn: -12.8,
-      ticker: "TSLA",
-      sector: "Technology"
-    },
-    {
-      id: "4",
-      name: "CSPX - iShares Core S&P 500",
-      type: "ETF_SINGOLO",
-      totalInvested: 1500,
-      currentValue: 1680,
-      shares: 3.2,
-      avgBuyPrice: 468.75,
-      currentPrice: 525.00,
-      ytdReturn: 11.5,
-      totalReturn: 12.0,
-      isin: "IE00B5BMR087",
-      ticker: "CSPX"
-    }
-  ];
+  const {
+    isMarketOpen,
+    marketStatus
+  } = useRealTimePrices();
 
+  // ✅ CALCOLI REALI
   const totalInvested = investments.reduce((sum, inv) => sum + inv.totalInvested, 0);
   const totalCurrentValue = investments.reduce((sum, inv) => sum + inv.currentValue, 0);
   const totalProfit = totalCurrentValue - totalInvested;
-  const totalReturnPercentage = ((totalProfit / totalInvested) * 100);
+  const totalReturnPercentage = totalInvested > 0 ? ((totalProfit / totalInvested) * 100) : 0;
   
-  const monthlyPACAmount = investments
-    .filter(inv => inv.type === "PAC_ETF")
-    .reduce((sum, inv) => sum + (inv.monthlyAmount || 0), 0);
+  const activePacPlans = pacPlans.filter(pac => pac.isActive && !pac.isPaused);
+  const monthlyPACAmount = activePacPlans.reduce((sum, pac) => {
+    const multiplier = pac.frequency === 'monthly' ? 1 : 
+                     pac.frequency === 'quarterly' ? 0.33 : 0.17;
+    return sum + (pac.monthlyAmount * multiplier);
+  }, 0);
 
-  // Theme colors seguendo il design system GoalFin
+  // Theme colors (mantieni lo stile esistente)
   const getThemeColors = () => {
     if (isDarkMode) {
       return {
@@ -172,33 +113,31 @@ const InvestmentsComponent: React.FC = () => {
 
   const theme = getThemeColors();
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
-
-  const formatPercentage = (value: number) => {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
-  };
-
   const getTypeLabel = (type: InvestmentType) => {
-    switch(type) {
-      case 'PAC_ETF': return 'PAC ETF';
-      case 'ETF_SINGOLO': return 'ETF';
-      case 'AZIONE': return 'Azione';
-    }
+    return INVESTMENT_TYPE_LABELS[type];
   };
 
   const getTypeColor = (type: InvestmentType) => {
     switch(type) {
-      case 'PAC_ETF': return 'bg-indigo-600 text-white'; // Indigo
-      case 'ETF_SINGOLO': return 'bg-violet-600 text-white'; // Violet 
-      case 'AZIONE': return 'bg-amber-500 text-white'; // Amber
+      case InvestmentType.PAC: return 'bg-indigo-600 text-white'; // Indigo
+      case InvestmentType.SINGLE_PURCHASE: return 'bg-violet-600 text-white'; // Violet 
+      case InvestmentType.DIVIDEND_STOCK: return 'bg-amber-500 text-white'; // Amber
+      case InvestmentType.BOND: return 'bg-emerald-600 text-white'; // Emerald
+      case InvestmentType.REIT: return 'bg-orange-600 text-white'; // Orange
+      case InvestmentType.CRYPTO: return 'bg-purple-600 text-white'; // Purple
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className={`${theme.background.primary} ${theme.text.primary} p-4 sm:p-6 transition-colors duration-300 rounded-2xl border ${theme.border} backdrop-blur-sm`}>
+        <div className="flex items-center justify-center h-32">
+          <div className="w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`${theme.background.primary} ${theme.text.primary} p-4 sm:p-6 transition-colors duration-300 rounded-2xl border ${theme.border} backdrop-blur-sm`}>
@@ -220,6 +159,16 @@ const InvestmentsComponent: React.FC = () => {
             <span className="sm:hidden">Vedi tutto</span>
             <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform duration-200" />
           </Link>
+
+          {/* Market Status Indicator */}
+          {marketStatus && (
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+              <span className={`${theme.text.muted} text-xs hidden sm:inline`}>
+                {marketStatus.isOpen ? 'Live' : 'Closed'}
+              </span>
+            </div>
+          )}
         </div>
         
         {/* View Toggle */}
@@ -307,185 +256,197 @@ const InvestmentsComponent: React.FC = () => {
             {formatCurrency(monthlyPACAmount)}
           </div>
           <div className={`text-xs font-medium ${theme.text.muted} relative z-10`}>
-            {investments.filter(inv => inv.type === "PAC_ETF").length} attivi
+            {activePacPlans.length} attivi
           </div>
         </div>
       </div>
 
       {/* Lista investimenti */}
-      <div className="space-y-3">
-        {investments.map((investment) => {
-          const isProfit = investment.totalReturn >= 0;
-          const profitLoss = investment.currentValue - investment.totalInvested;
-          
-          return (
-            <div key={investment.id} className={`${theme.background.card} ${theme.border} border rounded-xl p-4 backdrop-blur-sm ${theme.hover} transition-all duration-300 relative group`}>
-              
-              {/* Hover Glow Effect */}
-              <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-emerald-500/5 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity`} />
-              
-              {/* Mobile Layout */}
-              <div className="block lg:hidden relative z-10">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-md ${getTypeColor(investment.type)}`}>
-                        {getTypeLabel(investment.type)}
-                      </span>
-                      {investment.ticker && (
-                        <span className={`${theme.text.muted} text-xs font-medium ${theme.background.secondary} px-2 py-1 rounded-md ${theme.border} border`}>
-                          ${investment.ticker}
+      {investments.length === 0 ? (
+        <div className={`${theme.background.card} ${theme.border} border rounded-xl p-8 text-center`}>
+          <TrendingUp className={`w-12 h-12 ${theme.text.muted} mx-auto mb-3`} />
+          <p className={`${theme.text.muted} text-sm mb-4`}>Nessun investimento nel portafoglio</p>
+          <Link 
+            to="/investments" 
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all font-medium text-sm"
+          >
+            <Target className="w-4 h-4" />
+            Inizia a investire
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {investments.slice(0, 4).map((investment) => {
+            const isProfit = investment.totalReturn >= 0;
+            const profitLoss = investment.currentValue - investment.totalInvested;
+            
+            return (
+              <div key={investment.id} className={`${theme.background.card} ${theme.border} border rounded-xl p-4 backdrop-blur-sm ${theme.hover} transition-all duration-300 relative group`}>
+                
+                {/* Hover Glow Effect */}
+                <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-emerald-500/5 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+                
+                {/* Mobile Layout */}
+                <div className="block lg:hidden relative z-10">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-md ${getTypeColor(investment.type)}`}>
+                          {getTypeLabel(investment.type)}
                         </span>
-                      )}
+                        <span className={`${theme.text.muted} text-xs font-medium ${theme.background.secondary} px-2 py-1 rounded-md ${theme.border} border`}>
+                          {investment.symbol}
+                        </span>
+                        {isMarketOpen(investment.symbol) && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-green-500">Live</span>
+                          </div>
+                        )}
+                      </div>
+                      <h4 className={`text-sm font-semibold ${theme.text.primary} mb-2`}>{investment.name}</h4>
                     </div>
-                    <h4 className={`text-sm font-semibold ${theme.text.primary} mb-2`}>{investment.name}</h4>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
-                    <span className={`${theme.text.muted} text-xs font-medium`}>Investito</span>
-                    <div className={`text-sm font-bold ${theme.text.primary} mt-1`}>
-                      {formatCurrency(investment.totalInvested)}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
+                      <span className={`${theme.text.muted} text-xs font-medium`}>Investito</span>
+                      <div className={`text-sm font-bold ${theme.text.primary} mt-1`}>
+                        {formatCurrency(investment.totalInvested)}
+                      </div>
+                    </div>
+                    <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
+                      <span className={`${theme.text.muted} text-xs font-medium`}>Valore</span>
+                      <div className={`text-sm font-bold ${theme.text.primary} mt-1`}>
+                        {formatCurrency(investment.currentValue)}
+                      </div>
                     </div>
                   </div>
-                  <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
-                    <span className={`${theme.text.muted} text-xs font-medium`}>Valore</span>
-                    <div className={`text-sm font-bold ${theme.text.primary} mt-1`}>
-                      {formatCurrency(investment.currentValue)}
-                    </div>
-                  </div>
-                </div>
 
-                <div className={`flex justify-between items-center border-t ${theme.border} pt-3`}>
-                  <div>
-                    <div className={`text-xs ${theme.text.muted} font-medium mb-1`}>Rendimento</div>
-                    <div className={`text-sm font-bold`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
-                      {formatPercentage(investment.totalReturn)}
+                  <div className={`flex justify-between items-center border-t ${theme.border} pt-3`}>
+                    <div>
+                      <div className={`text-xs ${theme.text.muted} font-medium mb-1`}>Rendimento</div>
+                      <div className={`text-sm font-bold`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
+                        {formatPercentage(investment.totalReturnPercent)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-xs ${theme.text.muted} font-medium mb-1`}>Profitto</div>
+                      <div className={`text-sm font-bold`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
+                        {formatCurrency(profitLoss)}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className={`text-xs ${theme.text.muted} font-medium mb-1`}>Profitto</div>
-                    <div className={`text-sm font-bold`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
-                      {formatCurrency(profitLoss)}
+
+                  {investment.ytdReturn && (
+                    <div className={`mt-2 text-xs ${theme.text.muted} font-medium`}>
+                      YTD: <span className={`font-semibold`} style={{color: investment.ytdReturn >= 0 ? theme.colors.success : theme.colors.error}}>{formatPercentage(investment.ytdReturn)}</span>
                     </div>
-                  </div>
-                </div>
+                  )}
 
-                {investment.ytdReturn && (
-                  <div className={`mt-2 text-xs ${theme.text.muted} font-medium`}>
-                    YTD: <span className={`font-semibold`} style={{color: investment.ytdReturn >= 0 ? theme.colors.success : theme.colors.error}}>{formatPercentage(investment.ytdReturn)}</span>
-                  </div>
-                )}
-
-                {selectedView === 'details' && (
-                  <div className={`mt-4 pt-4 border-t ${theme.border}`}>
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      {investment.shares && (
+                  {selectedView === 'details' && (
+                    <div className={`mt-4 pt-4 border-t ${theme.border}`}>
+                      <div className="grid grid-cols-2 gap-3 text-xs">
                         <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
                           <span className={`${theme.text.muted} text-xs font-medium`}>Quantità</span>
-                          <div className={`font-bold ${theme.text.primary} mt-1`}>{investment.shares.toFixed(2)}</div>
+                          <div className={`font-bold ${theme.text.primary} mt-1`}>{investment.shares.toFixed(6).replace(/\.?0+$/, '')}</div>
                         </div>
-                      )}
-                      {investment.avgBuyPrice && (
                         <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
                           <span className={`${theme.text.muted} text-xs font-medium`}>Prezzo Medio</span>
                           <div className={`font-bold ${theme.text.primary} mt-1`}>{formatCurrency(investment.avgBuyPrice)}</div>
                         </div>
-                      )}
-                      {investment.currentPrice && (
                         <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
                           <span className={`${theme.text.muted} text-xs font-medium`}>Prezzo Attuale</span>
                           <div className={`font-bold ${theme.text.primary} mt-1`}>{formatCurrency(investment.currentPrice)}</div>
                         </div>
-                      )}
-                      {investment.type === "PAC_ETF" && investment.monthlyAmount && (
-                        <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
-                          <span className={`${theme.text.muted} text-xs font-medium`}>PAC Mensile</span>
-                          <div className={`font-bold mt-1`} style={{color: theme.colors.indigo}}>{formatCurrency(investment.monthlyAmount)}</div>
+                        {investment.sector && (
+                          <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
+                            <span className={`${theme.text.muted} text-xs font-medium`}>Settore</span>
+                            <div className={`font-bold ${theme.text.primary} mt-1 text-xs`}>{investment.sector}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop Layout */}
+                <div className="hidden lg:flex lg:items-center lg:justify-between relative z-10">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${getTypeColor(investment.type)}`}>
+                        {getTypeLabel(investment.type)}
+                      </span>
+                      <h4 className={`text-base font-bold ${theme.text.primary}`}>{investment.name}</h4>
+                      <span className={`${theme.text.muted} text-xs font-medium ${theme.background.secondary} px-3 py-1 rounded-lg ${theme.border} border`}>
+                        {investment.symbol}
+                      </span>
+                      {isMarketOpen(investment.symbol) && (
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-green-500">Live</span>
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Layout */}
-              <div className="hidden lg:flex lg:items-center lg:justify-between relative z-10">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${getTypeColor(investment.type)}`}>
-                      {getTypeLabel(investment.type)}
-                    </span>
-                    <h4 className={`text-base font-bold ${theme.text.primary}`}>{investment.name}</h4>
-                    {investment.ticker && (
-                      <span className={`${theme.text.muted} text-xs font-medium ${theme.background.secondary} px-3 py-1 rounded-lg ${theme.border} border`}>
-                        ${investment.ticker}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {selectedView === 'details' && (
-                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 text-xs">
-                      <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
-                        <span className={`${theme.text.muted} text-xs font-medium`}>Investito</span>
-                        <div className={`font-bold ${theme.text.primary} mt-1`}>{formatCurrency(investment.totalInvested)}</div>
-                      </div>
-                      <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
-                        <span className={`${theme.text.muted} text-xs font-medium`}>Valore</span>
-                        <div className={`font-bold ${theme.text.primary} mt-1`}>{formatCurrency(investment.currentValue)}</div>
-                      </div>
-                      {investment.shares && (
+                    
+                    {selectedView === 'details' && (
+                      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 text-xs">
+                        <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
+                          <span className={`${theme.text.muted} text-xs font-medium`}>Investito</span>
+                          <div className={`font-bold ${theme.text.primary} mt-1`}>{formatCurrency(investment.totalInvested)}</div>
+                        </div>
+                        <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
+                          <span className={`${theme.text.muted} text-xs font-medium`}>Valore</span>
+                          <div className={`font-bold ${theme.text.primary} mt-1`}>{formatCurrency(investment.currentValue)}</div>
+                        </div>
                         <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
                           <span className={`${theme.text.muted} text-xs font-medium`}>Quantità</span>
-                          <div className={`font-bold ${theme.text.primary} mt-1`}>{investment.shares.toFixed(2)}</div>
+                          <div className={`font-bold ${theme.text.primary} mt-1`}>{investment.shares.toFixed(6).replace(/\.?0+$/, '')}</div>
                         </div>
-                      )}
-                      {investment.avgBuyPrice && investment.currentPrice && (
                         <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
                           <span className={`${theme.text.muted} text-xs font-medium`}>Prezzo M/A</span>
                           <div className={`font-bold ${theme.text.primary} text-xs mt-1`}>
                             {formatCurrency(investment.avgBuyPrice)} / {formatCurrency(investment.currentPrice)}
                           </div>
                         </div>
-                      )}
-                      
-                      {investment.type === "PAC_ETF" && investment.monthlyAmount && (
-                        <>
-                          <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
-                            <span className={`${theme.text.muted} text-xs font-medium`}>PAC Mensile</span>
-                            <div className="font-bold mt-1" style={{color: theme.colors.indigo}}>{formatCurrency(investment.monthlyAmount)}</div>
-                          </div>
-                          <div className={`${theme.background.secondary} ${theme.border} border rounded-lg p-3`}>
-                            <span className={`${theme.text.muted} text-xs font-medium`}>Mesi Attivi</span>
-                            <div className={`font-bold ${theme.text.primary} mt-1`}>{investment.totalMonths}</div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </div>
 
-                <div className={`text-right border-l ${theme.border} pl-6 ml-6`}>
-                  <div className={`text-lg font-bold mb-1`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
-                    {formatPercentage(investment.totalReturn)}
-                  </div>
-                  <div className={`text-sm font-bold mb-2`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
-                    {formatCurrency(profitLoss)}
-                  </div>
-                  {investment.ytdReturn && (
-                    <div className={`text-xs font-medium ${theme.text.muted}`}>
-                      YTD: <span className={`font-semibold`} style={{color: investment.ytdReturn >= 0 ? theme.colors.success : theme.colors.error}}>{formatPercentage(investment.ytdReturn)}</span>
+                  <div className={`text-right border-l ${theme.border} pl-6 ml-6`}>
+                    <div className={`text-lg font-bold mb-1`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
+                      {formatPercentage(investment.totalReturnPercent)}
                     </div>
-                  )}
+                    <div className={`text-sm font-bold mb-2`} style={{color: isProfit ? theme.colors.success : theme.colors.error}}>
+                      {formatCurrency(profitLoss)}
+                    </div>
+                    {investment.ytdReturn && (
+                      <div className={`text-xs font-medium ${theme.text.muted}`}>
+                        YTD: <span className={`font-semibold`} style={{color: investment.ytdReturn >= 0 ? theme.colors.success : theme.colors.error}}>{formatPercentage(investment.ytdReturn)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+
+          {/* Show More Button */}
+          {investments.length > 4 && (
+            <Link 
+              to="/investments" 
+              className={`block ${theme.background.card} ${theme.border} border rounded-xl p-4 text-center ${theme.hover} transition-all duration-300 group`}
+            >
+              <div className={`${theme.text.muted} group-hover:${theme.text.primary} transition-colors flex items-center justify-center gap-2`}>
+                <span className="font-medium">Visualizza tutti gli investimenti ({investments.length})</span>
+                <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
-export default InvestmentsComponent;
+export default InvestmentsDashboardComponent;
