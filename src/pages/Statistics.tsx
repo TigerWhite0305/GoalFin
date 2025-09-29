@@ -85,12 +85,10 @@ const StatisticsContent: React.FC = () => {
     registerChartRef('category-breakdown', categoryRef as React.RefObject<HTMLElement>);
   }, [registerChartRef]);
 
-  // Funzioni per gestire ExportModal globale
   const handleGlobalExport = () => {
-    console.log('Esportazione globale:', globalExportSettings);
-    // Qui implementerai la logica di export globale
-    // Esempio: generare file con tutti i dati della dashboard
-    setShowGlobalExportModal(false);
+    // Usa gli hook già implementati per export reale
+    quickExport('dashboard-complete', globalExportSettings.format);
+    // oppure advancedExport con opzioni complete
   };
 
   const updateGlobalExportSettings = (newSettings: ExportSettings) => {
