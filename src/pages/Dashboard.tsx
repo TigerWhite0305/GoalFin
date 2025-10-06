@@ -6,7 +6,6 @@ import { RevenueChart } from "../components/dashboard/RevenueChart";
 import { ExpensesPieChart } from "../components/dashboard/ExpensesPieChart";
 import { TransactionsList } from "../components/dashboard/TransactionsList";
 import { Goals } from "../components/dashboard/GoalsList";
-import Investments from "../components/dashboard/Investments";
 import { useTheme } from "../context/ThemeContext";
 
 const Dashboard: React.FC = () => {
@@ -69,12 +68,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Investments - Sezione investimenti full width */}
-          <div className="col-span-1 md:col-span-2 2xl:col-start-1 2xl:row-start-6 2xl:col-span-6 2xl:row-span-1 h-full">
-            <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'} backdrop-blur-sm border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full overflow-hidden`}>
-              <Investments />
-            </div>
-          </div>
 
         </div>
       </div>

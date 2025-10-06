@@ -10,7 +10,6 @@ const navItems = [
   { name: "Statistiche", path: "/statistics" },
   { name: "Transazioni", path: "/transactions" },
   { name: "Portafoglio", path: "/portfolio" },
-  { name: "Investimenti", path: "/investments" },
 ];
 
 const Navbar: React.FC = () => {
@@ -56,7 +55,6 @@ const Navbar: React.FC = () => {
 
   const notifications = [
     { id: 1, title: "Nuovo dividendo ricevuto", amount: "+€12.50", time: "2 min fa", type: "income" },
-    { id: 2, title: "PAC ETF eseguito", amount: "-€300.00", time: "1 ora fa", type: "investment" },
     { id: 3, title: "Obiettivo raggiunto!", description: "Vacanza in Giappone al 70%", time: "3 ore fa", type: "goal" }
   ];
 

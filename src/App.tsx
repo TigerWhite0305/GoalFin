@@ -3,7 +3,6 @@ import Dashboard from "./pages/Dashboard";
 import Statistics from "./pages/Statistics";
 import Transactions from "./pages/Transactions";
 import Portfolio from "./pages/Portfolio";
-import { InvestmentsPage } from "./pages/InvestmentsPage"; // ✅ CORRETTO
 import Navbar from "./components/layout/Navbar";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -22,7 +21,6 @@ function App() {
                 <Route path="/statistics" element={<Statistics />} />
                 <Route path="/transactions" element={<Transactions />} />
                 <Route path="/portfolio" element={<Portfolio />} />
-                <Route path="/investments" element={<InvestmentsPage />} /> {/* ✅ CORRETTO */}
               </Routes>
             </div>
           </div>
