@@ -1,4 +1,4 @@
-// src/components/statistics/MonthlyAreaChart.tsx
+// src/components/statistics/chart/MonthlyAreaChart.tsx
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, Wallet, Target } from "lucide-react";
@@ -9,7 +9,6 @@ import { useTheme } from "../../../context/ThemeContext";
 interface PatrimonioData {
   month: string;
   conti: number;
-  investimenti: number;
   totale: number;
   obiettivo: number;
 }
@@ -21,19 +20,19 @@ interface MonthlyAreaChartProps {
 const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) => {
   const { isDarkMode } = useTheme();
 
+  // ✅ Dati aggiornati - SOLO CONTI (rimosso investimenti)
   const patrimonioData: PatrimonioData[] = [
-    { month: 'Gen', conti: 15000, investimenti: 12000, totale: 27000, obiettivo: 30000 },
-    { month: 'Feb', conti: 15800, investimenti: 12400, totale: 28200, obiettivo: 30000 },
-    { month: 'Mar', conti: 16200, investimenti: 11800, totale: 28000, obiettivo: 30000 },
-    { month: 'Apr', conti: 17100, investimenti: 13200, totale: 30300, obiettivo: 32000 },
-    { month: 'Mag', conti: 17600, investimenti: 13600, totale: 31200, obiettivo: 32000 },
-    { month: 'Giu', conti: 18131, investimenti: 14200, totale: 32331, obiettivo: 34000 },
-    { month: 'Lug', conti: 18650, investimenti: 14800, totale: 33450, obiettivo: 34000 },
-    { month: 'Ago', conti: 19100, investimenti: 14100, totale: 33200, obiettivo: 34000 },
-    { month: 'Set', conti: 19580, investimenti: 15305, totale: 34885, obiettivo: 36000 },
+    { month: 'Gen', conti: 15000, totale: 15000, obiettivo: 20000 },
+    { month: 'Feb', conti: 15800, totale: 15800, obiettivo: 20000 },
+    { month: 'Mar', conti: 16200, totale: 16200, obiettivo: 22000 },
+    { month: 'Apr', conti: 17100, totale: 17100, obiettivo: 22000 },
+    { month: 'Mag', conti: 17600, totale: 17600, obiettivo: 24000 },
+    { month: 'Giu', conti: 18131, totale: 18131, obiettivo: 24000 },
+    { month: 'Lug', conti: 18650, totale: 18650, obiettivo: 26000 },
+    { month: 'Ago', conti: 19100, totale: 19100, obiettivo: 26000 },
+    { month: 'Set', conti: 19580, totale: 19580, obiettivo: 28000 },
   ];
 
-  // Theme-aware colors seguendo il design system
   const getThemeColors = () => ({
     background: {
       card: isDarkMode ? '#161920' : '#F8FAFC',
@@ -51,8 +50,8 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
       axis: isDarkMode ? '#9CA3AF' : '#64748B'
     },
     accent: {
-      primary: '#6366F1', // Indigo
-      secondary: '#10B981', // Emerald  
+      primary: '#6366F1',
+      secondary: '#10B981',
       amber: '#F59E0B',
       purple: '#8B5CF6',
       blue: '#3B82F6',
@@ -84,17 +83,6 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
                 {formatCurrency(data.conti)}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className={`w-3 h-3 md:w-4 md:h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-                <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} text-xs md:text-sm`}>
-                  Investimenti
-                </span>
-              </div>
-              <span className={`font-bold text-xs md:text-sm ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                {formatCurrency(data.investimenti)}
-              </span>
-            </div>
             <div className={`border-t ${isDarkMode ? 'border-gray-600/30' : 'border-gray-200/30'} pt-2`}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
@@ -123,7 +111,6 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
     return null;
   };
 
-  // Calcola crescita
   const latestData = patrimonioData[patrimonioData.length - 1];
   const firstData = patrimonioData[0];
   const crescitaTotale = latestData.totale - firstData.totale;
@@ -142,7 +129,6 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
   return (
     <div className={`${isDarkMode ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900' : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'} p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-xl ${isDarkMode ? 'border border-gray-700/50' : 'border border-slate-200/50'} transition-all duration-300`}>
       
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-purple-500/20 border border-purple-500/30' : 'bg-purple-50 border border-purple-200'}`}>
@@ -157,7 +143,6 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
             </p>
           </div>
           
-          {/* Export Button - Sempre visibile */}
           <ChartHoverExport
             chartId="area-chart"
             chartName="Crescita Patrimonio"
@@ -168,7 +153,6 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
           />
         </div>
         
-        {/* Indicatore patrimonio */}
         <div className={`text-center md:text-right ${isDarkMode ? 'bg-gray-900/50 border border-gray-600/30' : 'bg-white/50 border border-slate-200/50'} p-3 md:p-4 rounded-xl md:rounded-2xl backdrop-blur-sm`}>
           <p className={`${colors.text.muted} text-xs`}>
             Patrimonio totale
@@ -182,7 +166,6 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
         </div>
       </div>
 
-      {/* Chart Container */}
       <div className={`relative ${isDarkMode ? 'bg-gray-900/30 border border-gray-600/20' : 'bg-white/30 border border-slate-200/20'} rounded-xl md:rounded-2xl p-3 md:p-6 backdrop-blur-sm`}>
         <ResponsiveContainer width="100%" height={320}>
           <AreaChart data={patrimonioData} margin={{ top: 20, right: 15, left: 5, bottom: 5 }}>
@@ -191,21 +174,9 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
                 <stop offset="5%" stopColor={colors.accent.blue} stopOpacity={0.8}/>
                 <stop offset="95%" stopColor={colors.accent.blue} stopOpacity={0.1}/>
               </linearGradient>
-              <linearGradient id="investimentiAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={colors.accent.purple} stopOpacity={0.8}/>
-                <stop offset="95%" stopColor={colors.accent.purple} stopOpacity={0.1}/>
-              </linearGradient>
-              <linearGradient id="totaleAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={colors.accent.secondary} stopOpacity={0.6}/>
-                <stop offset="95%" stopColor={colors.accent.secondary} stopOpacity={0.05}/>
-              </linearGradient>
             </defs>
             
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              stroke={colors.chart.grid} 
-              opacity={0.3} 
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.chart.grid} opacity={0.3} />
             <XAxis 
               dataKey="month" 
               stroke={colors.chart.axis}
@@ -221,23 +192,14 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
             />
             <Tooltip content={<CustomTooltip />} />
             
+            {/* ✅ Solo area conti */}
             <Area
               type="monotone"
               dataKey="conti"
-              stackId="1"
               stroke={colors.accent.blue}
               strokeWidth={2}
               fill="url(#contiAreaGradient)"
               name="Conti"
-            />
-            <Area
-              type="monotone"
-              dataKey="investimenti"
-              stackId="1"
-              stroke={colors.accent.purple}
-              strokeWidth={2}
-              fill="url(#investimentiAreaGradient)"
-              name="Investimenti"
             />
             
             {/* Linea obiettivo */}
@@ -253,18 +215,12 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
           </AreaChart>
         </ResponsiveContainer>
         
-        {/* Legenda */}
+        {/* ✅ Legenda aggiornata - rimosso investimenti */}
         <div className="flex justify-center mt-3 md:mt-4 gap-3 md:gap-6 flex-wrap">
           <div className="flex items-center gap-2">
             <div className={`w-3 h-2 md:w-4 md:h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded shadow-sm`}></div>
             <span className={`${isDarkMode ? 'text-blue-300' : 'text-blue-600'} text-xs md:text-sm font-medium`}>
               Conti Correnti
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-2 md:w-4 md:h-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded shadow-sm`}></div>
-            <span className={`${isDarkMode ? 'text-purple-300' : 'text-purple-600'} text-xs md:text-sm font-medium`}>
-              Investimenti
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -276,7 +232,6 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
         </div>
       </div>
 
-      {/* Progress bar verso obiettivo */}
       <div className={`mt-4 md:mt-6 ${isDarkMode ? 'bg-gray-900/60 border border-gray-600/30' : 'bg-white/60 border border-slate-200/30'} rounded-xl md:rounded-2xl p-3 md:p-4 backdrop-blur-sm`}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -290,19 +245,20 @@ const MonthlyAreaChart: React.FC<MonthlyAreaChartProps> = ({ formatCurrency }) =
           </span>
         </div>
         
-        <div className={`h-2 md:h-3 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200/50'} rounded-full overflow-hidden`}>
-          <div 
-            className={`h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-1000 ease-out shadow-sm ${isDarkMode ? 'shadow-amber-500/20' : 'shadow-amber-500/30'}`}
-            style={{ 
-              width: `${Math.min(parseFloat(progressoObiettivo), 100)}%`,
-              boxShadow: isDarkMode ? '0 0 20px rgba(245, 158, 11, 0.3)' : '0 0 15px rgba(245, 158, 11, 0.2)'
-            }}
-          ></div>
+        <div className={`h-2 md:h-3 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+          <div
+            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-1000"
+            style={{ width: `${Math.min(100, parseFloat(progressoObiettivo))}%` }}
+          />
         </div>
         
-        <div className={`flex justify-between text-xs ${colors.text.muted} mt-2`}>
-          <span>{formatCurrency(latestData.totale)}</span>
-          <span>{formatCurrency(latestData.obiettivo)}</span>
+        <div className="flex justify-between mt-2">
+          <span className={`${colors.text.muted} text-xs`}>
+            Attuale: {formatCurrency(latestData.totale)}
+          </span>
+          <span className={`${colors.text.muted} text-xs`}>
+            Target: {formatCurrency(latestData.obiettivo)}
+          </span>
         </div>
       </div>
     </div>

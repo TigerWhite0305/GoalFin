@@ -4,7 +4,7 @@ export type SearchResult = {
   id: string;
   title: string;
   subtitle: string;
-  type: 'transaction' | 'portfolio' | 'goal' | 'investment';
+  type: 'transaction' | 'portfolio' | 'goal'; // ✅ Rimosso 'investment'
   url: string;
   icon: string;
   amount?: number;
