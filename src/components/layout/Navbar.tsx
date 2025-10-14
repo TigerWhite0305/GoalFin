@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Settings, User, Moon, Sun, Search, ChevronDown, LogOut, Wallet } from "lucide-react";
 import { useGlobalSearch } from "../../hooks/useGlobalSearch";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
+import { logoutApi } from '../../api';
 
 const navItems = [
   { name: "Dashboard", path: "/" },
@@ -19,6 +21,7 @@ const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const { logout } = useAuth();
 
   // Hook per il tema
   const { toggleTheme, isDarkMode } = useTheme();
@@ -51,6 +54,19 @@ const Navbar: React.FC = () => {
     navigate(result.url);
     setShowSearch(false);
     setSearchTerm('');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+      logout(); // Pulisce lo state
+      navigate('/login');
+    } catch (error) {
+      console.error('Errore logout:', error);
+      // Pulisci comunque in caso di errore
+      logout();
+      navigate('/login');
+    }
   };
 
   const notifications = [
@@ -325,7 +341,7 @@ const Navbar: React.FC = () => {
                   
                   <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200/50'}`}>
                     <button 
-                      onClick={() => console.log('Logout - funzionalità da implementare')}
+                      onClick={handleLogout}
                       className={`w-full flex items-center gap-3 px-3 py-3 ${isDarkMode ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10' : 'text-red-600 hover:text-red-700 hover:bg-red-500/5'} rounded-xl transition-colors`}
                     >
                       <LogOut className="w-4 h-4" />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, TrendingUp, Check, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { registerApi } from '../api';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ const RegisterPage = () => {
     setError('');
     setIsLoading(true);
 
+    // Validazione campi
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
       setError('Tutti i campi sono obbligatori');
       setIsLoading(false);
@@ -68,19 +70,32 @@ const RegisterPage = () => {
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const userData = {
-        id: Math.floor(Math.random() * 10000),
+      // Chiamata API al backend
+      const response = await registerApi({
         name: formData.name,
-        email: formData.email
-      };
+        email: formData.email,
+        password: formData.password
+      });
       
-      login(userData);
-      navigate('/');
+      if (response.success) {
+        // Login automatico dopo registrazione
+        const userData = {
+          id: parseInt(response.data.user.id), // Converti string UUID a number se necessario
+          name: response.data.user.name,
+          email: response.data.user.email,
+        };
+        
+        login(userData);
+        
+        // Redirect alla dashboard
+        navigate('/');
+      } else {
+        setError(response.message || 'Errore durante la registrazione');
+      }
       
-    } catch (err) {
-      setError('Errore durante la registrazione. Riprova.');
+    } catch (err: any) {
+      console.error('Errore registrazione:', err);
+      setError(err.message || 'Errore durante la registrazione. Riprova.');
     } finally {
       setIsLoading(false);
     }
@@ -182,38 +197,21 @@ const RegisterPage = () => {
 
               {formData.password && (
                 <div className="mt-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.minLength ? 'bg-emerald-500' : isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}>
-                      {passwordRequirements.minLength && <Check className="w-3 h-3 text-white" />}
+                  {[
+                    { key: 'minLength', label: 'Almeno 8 caratteri' },
+                    { key: 'hasUpperCase', label: 'Una lettera maiuscola' },
+                    { key: 'hasLowerCase', label: 'Una lettera minuscola' },
+                    { key: 'hasNumber', label: 'Un numero' }
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements[key as keyof typeof passwordRequirements] ? 'bg-emerald-500' : isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}>
+                        {passwordRequirements[key as keyof typeof passwordRequirements] && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className={`text-xs ${passwordRequirements[key as keyof typeof passwordRequirements] ? 'text-emerald-400' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {label}
+                      </span>
                     </div>
-                    <span className={`text-xs ${passwordRequirements.minLength ? 'text-emerald-400' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Almeno 8 caratteri
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.hasUpperCase ? 'bg-emerald-500' : isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}>
-                      {passwordRequirements.hasUpperCase && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                    <span className={`text-xs ${passwordRequirements.hasUpperCase ? 'text-emerald-400' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Una lettera maiuscola
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.hasLowerCase ? 'bg-emerald-500' : isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}>
-                      {passwordRequirements.hasLowerCase && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                    <span className={`text-xs ${passwordRequirements.hasLowerCase ? 'text-emerald-400' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Una lettera minuscola
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements.hasNumber ? 'bg-emerald-500' : isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}>
-                      {passwordRequirements.hasNumber && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                    <span className={`text-xs ${passwordRequirements.hasNumber ? 'text-emerald-400' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Un numero
-                    </span>
-                  </div>
+                  ))}
                 </div>
               )}
             </div>

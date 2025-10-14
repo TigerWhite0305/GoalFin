@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, TrendingUp, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { loginApi } from '../api';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -36,31 +37,28 @@ const LoginPage = () => {
     }
 
     try {
-      // CREDENZIALI DI TEST (rimuovere in produzione)
-      const TEST_EMAIL = 'test@esempio.com';
-      const TEST_PASSWORD = 'password123';
+      // Chiamata API al backend
+      const response = await loginApi({ email, password });
       
-      // Simulazione chiamata API (rimuovere in produzione)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Verifica credenziali di test
-      if (email === TEST_EMAIL && password === TEST_PASSWORD) {
-        // Login riuscito
+      if (response.success) {
+        // Salva utente nel context (AuthContext)
         const userData = {
-          id: 1,
-          name: 'Mario Rossi',
-          email: email
+          id: parseInt(response.data.user.id), // Converti string UUID a number se necessario
+          name: response.data.user.name,
+          email: response.data.user.email,
         };
         
         login(userData);
+        
+        // Redirect alla dashboard
         navigate('/');
       } else {
-        // Credenziali errate
-        setError('Email o password non valide. Prova con test@esempio.com / password123');
+        setError(response.message || 'Errore durante il login');
       }
       
-    } catch (err) {
-      setError('Errore durante il login. Riprova.');
+    } catch (err: any) {
+      console.error('Errore login:', err);
+      setError(err.message || 'Credenziali non valide. Riprova.');
     } finally {
       setIsLoading(false);
     }
@@ -101,12 +99,6 @@ const LoginPage = () => {
           <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
             Accedi per gestire le tue finanze
           </p>
-          {/* Credenziali di test */}
-          <div className={`mt-4 ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-indigo-100 border-indigo-300'} border rounded-xl p-3`}>
-            <p className={`${isDarkMode ? 'text-indigo-300' : 'text-indigo-700'} text-xs font-medium mb-1`}>🔑 Credenziali di Test:</p>
-            <p className={`${isDarkMode ? 'text-indigo-200' : 'text-indigo-600'} text-xs`}>Email: <span className="font-mono">test@esempio.com</span></p>
-            <p className={`${isDarkMode ? 'text-indigo-200' : 'text-indigo-600'} text-xs`}>Password: <span className="font-mono">password123</span></p>
-          </div>
         </div>
 
         {/* Card di Login */}
