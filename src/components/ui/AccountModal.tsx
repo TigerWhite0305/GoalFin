@@ -1,24 +1,31 @@
+// src/components/modals/AccountModal.tsx - AGGIORNATO PER BACKEND REALE
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark } from "lucide-react";
+import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
+// ✅ TIPO AGGIORNATO per essere compatibile con il backend
 export type Account = {
-  id: number;
+  id: string;          // ✅ string UUID (non number)
   name: string;
   type: string;
-  bank: string;
   balance: number;
   currency: string;
-  color: string;
-  icon: any;
-  lastTransaction: string;
+  color?: string;
+  icon?: string;
+  isActive?: boolean;
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Campi opzionali per compatibilità frontend
+  bank?: string;       // ⚡ Manteniamo per compatibilità UI
+  lastTransaction?: string;
 };
 
 interface AccountModalProps {
   account?: Account;
   isNew: boolean;
   onClose: () => void;
-  onSave: (account: any) => void;
+  onSave: (account: any) => Promise<void>; // ✅ Ora è async
 }
 
 const AccountModal: React.FC<AccountModalProps> = ({ 
@@ -28,10 +35,18 @@ const AccountModal: React.FC<AccountModalProps> = ({
   onSave 
 }) => {
   const { isDarkMode } = useTheme();
+  
+  // ✅ Stati del form aggiornati
   const [name, setName] = useState(account?.name ?? "");
   const [type, setType] = useState(account?.type ?? "checking");
-  const [bank, setBank] = useState(account?.bank ?? "");
   const [balance, setBalance] = useState(account?.balance?.toString() ?? "");
+  const [currency, setCurrency] = useState(account?.currency ?? "EUR");
+  const [color, setColor] = useState(account?.color ?? "");
+  const [icon, setIcon] = useState(account?.icon ?? "");
+  
+  // ✅ Stati UI per gestire async
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Theme colors matching other modals
   const getThemeColors = () => {
@@ -78,16 +93,23 @@ const AccountModal: React.FC<AccountModalProps> = ({
 
   const theme = getThemeColors();
 
+  // ✅ Aggiornati i tipi di conto per essere compatibili con backend
   const accountTypes = [
     { value: "checking", label: "Conto Corrente", icon: Landmark, color: "#6366F1" },
     { value: "savings", label: "Conto Risparmio", icon: PiggyBank, color: "#10B981" },
-    { value: "prepaid", label: "Carta Prepagata", icon: CreditCard, color: "#F59E0B" },
-    { value: "business", label: "Conto Business", icon: Building, color: "#8B5CF6" },
+    { value: "card", label: "Carta/Prepagata", icon: CreditCard, color: "#F59E0B" },
+    { value: "investment", label: "Investimenti", icon: Building, color: "#8B5CF6" },
   ];
 
-  const banks = [
-    "UniCredit", "Intesa Sanpaolo", "BPER", "Banco BPM", "Crédit Agricole", 
-    "UBI Banca", "PostePay", "N26", "Revolut", "Altro"
+  const currencies = [
+    { value: "EUR", label: "€ Euro", flag: "🇪🇺" },
+    { value: "USD", label: "$ Dollaro", flag: "🇺🇸" },
+    { value: "GBP", label: "£ Sterlina", flag: "🇬🇧" },
+  ];
+
+  const accountColors = [
+    "#6366F1", "#10B981", "#F59E0B", "#8B5CF6", 
+    "#EF4444", "#06B6D4", "#84CC16", "#F97316"
   ];
 
   useEffect(() => {
@@ -97,19 +119,59 @@ const AccountModal: React.FC<AccountModalProps> = ({
     };
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ✅ Validazione form migliorata
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!name.trim()) {
+      newErrors.name = "Il nome del conto è obbligatorio";
+    } else if (name.trim().length < 2) {
+      newErrors.name = "Il nome deve essere almeno 2 caratteri";
+    }
+
+    if (!type) {
+      newErrors.type = "Seleziona un tipo di conto";
+    }
+
+    if (balance && isNaN(parseFloat(balance))) {
+      newErrors.balance = "Inserisci un importo valido";
+    }
+
+    if (balance && parseFloat(balance) < 0) {
+      newErrors.balance = "Il saldo non può essere negativo";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ✅ Submit handler asincrono
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !bank) {
-      return;
-    }
+    if (!validateForm()) return;
     
-    onSave({
-      name,
-      type,
-      bank,
-      balance: balance || "0"
-    });
+    setIsSubmitting(true);
+    
+    try {
+      // ✅ Dati formattati per il backend
+      const accountData = {
+        name: name.trim(),
+        type,
+        balance: balance ? parseFloat(balance) : 0,
+        currency,
+        color: color || accountTypes.find(t => t.value === type)?.color,
+        icon: icon || type
+      };
+
+      await onSave(accountData);
+      onClose();
+    } catch (error) {
+      console.error('Errore nel salvataggio:', error);
+      // Il toast error viene gestito nel componente parent
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const selectedType = accountTypes.find(t => t.value === type);
@@ -135,165 +197,244 @@ const AccountModal: React.FC<AccountModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className={`p-2 hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-100/50 rounded-lg ${theme.text.muted} hover:text-gray-50 dark:hover:text-gray-50 light:hover:text-gray-900 transition-all`}
+            disabled={isSubmitting}
+            className={`p-2 hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-100/50 rounded-lg ${theme.text.muted} hover:text-gray-50 dark:hover:text-gray-50 light:hover:text-gray-900 transition-all disabled:opacity-50`}
           >
             <X className="w-5 h-5 md:w-6 md:h-6" />
           </button>
         </div>
 
-        <div className="p-4 md:p-6 overflow-y-auto flex-1">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
-            
-            {/* Left Column */}
-            <div className="space-y-4 md:space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
+          <div className="p-4 md:p-6 overflow-y-auto flex-1">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
               
-              {/* Tipo Conto */}
-              <div className="flex flex-col gap-2 md:gap-3">
-                <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>Tipo di Conto</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
-                  {accountTypes.map((accountType) => {
-                    const IconComponent = accountType.icon;
-                    return (
+              {/* Left Column */}
+              <div className="space-y-4 md:space-y-6">
+                
+                {/* Tipo Conto */}
+                <div className="flex flex-col gap-2 md:gap-3">
+                  <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
+                    Tipo di Conto *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+                    {accountTypes.map((accountType) => {
+                      const IconComponent = accountType.icon;
+                      return (
+                        <button
+                          key={accountType.value}
+                          type="button"
+                          onClick={() => {
+                            setType(accountType.value);
+                            if (!color) setColor(accountType.color);
+                            if (!icon) setIcon(accountType.value);
+                          }}
+                          disabled={isSubmitting}
+                          className={`p-3 md:p-4 rounded-xl border-2 transition-all flex items-center gap-2 md:gap-3 text-sm md:text-base ${
+                            type === accountType.value
+                              ? "border-blue-500/50 bg-blue-500/10 text-blue-300"
+                              : `${theme.border.card} ${theme.background.card} ${theme.text.secondary} hover:border-gray-600 dark:hover:border-gray-600 light:hover:border-gray-400 hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-200/50`
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          <IconComponent className="w-4 h-4 md:w-5 md:h-5" style={{ color: accountType.color }} />
+                          <span className="font-medium">{accountType.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {errors.type && (
+                    <p className="text-red-400 text-xs md:text-sm">{errors.type}</p>
+                  )}
+                </div>
+
+                {/* Nome Conto */}
+                <div className="flex flex-col gap-2 md:gap-3">
+                  <label className={`${theme.text.primary} font-semibold flex items-center gap-2 text-sm md:text-base`}>
+                    <Wallet className={`w-4 h-4 md:w-5 md:h-5 ${theme.text.muted}`} />
+                    Nome del Conto *
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Es. Conto Corrente Principale"
+                    className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
+                      errors.name ? 'border-red-400' : ''
+                    }`}
+                    disabled={isSubmitting}
+                    required
+                  />
+                  {errors.name && (
+                    <p className="text-red-400 text-xs md:text-sm">{errors.name}</p>
+                  )}
+                </div>
+
+                {/* Saldo e Valuta */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-2 md:gap-3">
+                    <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
+                      {isNew ? "Saldo Iniziale" : "Saldo Attuale"}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={balance}
+                      onChange={(e) => setBalance(e.target.value)}
+                      placeholder="0.00"
+                      className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
+                        errors.balance ? 'border-red-400' : ''
+                      }`}
+                      disabled={isSubmitting}
+                    />
+                    {errors.balance && (
+                      <p className="text-red-400 text-xs md:text-sm">{errors.balance}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2 md:gap-3">
+                    <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
+                      Valuta
+                    </label>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base`}
+                      disabled={isSubmitting}
+                    >
+                      {currencies.map((curr) => (
+                        <option key={curr.value} value={curr.value}>
+                          {curr.flag} {curr.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Colore Personalizzato */}
+                <div className="flex flex-col gap-2 md:gap-3">
+                  <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
+                    Colore del Conto
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    {accountColors.map((colorOption) => (
                       <button
-                        key={accountType.value}
+                        key={colorOption}
                         type="button"
-                        onClick={() => setType(accountType.value)}
-                        className={`p-3 md:p-4 rounded-xl border-2 transition-all flex items-center gap-2 md:gap-3 text-sm md:text-base ${
-                          type === accountType.value
-                            ? "border-blue-500/50 bg-blue-500/10 text-blue-300"
-                            : `${theme.border.card} ${theme.background.card} ${theme.text.secondary} hover:border-gray-600 dark:hover:border-gray-600 light:hover:border-gray-400 hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-200/50`
+                        onClick={() => setColor(colorOption)}
+                        className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                          color === colorOption 
+                            ? 'border-gray-300 scale-110' 
+                            : 'border-gray-600 hover:scale-105'
                         }`}
-                      >
-                        <IconComponent className="w-4 h-4 md:w-5 md:h-5" style={{ color: accountType.color }} />
-                        <span className="font-medium">{accountType.label}</span>
-                      </button>
-                    );
-                  })}
+                        style={{ backgroundColor: colorOption }}
+                        disabled={isSubmitting}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Nome Conto */}
-              <div className="flex flex-col gap-2 md:gap-3">
-                <label className={`${theme.text.primary} font-semibold flex items-center gap-2 text-sm md:text-base`}>
-                  <Wallet className={`w-4 h-4 md:w-5 md:h-5 ${theme.text.muted}`} />
-                  Nome del Conto
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Es. Conto Corrente Principale"
-                  className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base`}
-                  required
-                />
-              </div>
-
-              {/* Banca */}
-              <div className="flex flex-col gap-2 md:gap-3">
-                <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>Banca</label>
-                <select
-                  value={bank}
-                  onChange={(e) => setBank(e.target.value)}
-                  className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base`}
-                  required
-                >
-                  <option value="">Seleziona una banca</option>
-                  {banks.map((bankName) => (
-                    <option key={bankName} value={bankName}>{bankName}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Saldo */}
-              <div className="flex flex-col gap-2 md:gap-3">
-                <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
-                  {isNew ? "Saldo Iniziale (€)" : "Saldo Attuale (€)"}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={balance}
-                  onChange={(e) => setBalance(e.target.value)}
-                  placeholder="0.00"
-                  className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base`}
-                />
-              </div>
-            </div>
-
-            {/* Right Column - Preview */}
-            <div className="space-y-4 md:space-y-6">
-              {name && selectedType ? (
-                <div className={`p-4 md:p-6 ${theme.background.card} rounded-xl ${theme.border.card} border`}>
-                  <h3 className={`${theme.text.primary} font-semibold mb-3 md:mb-4 text-sm md:text-base flex items-center gap-2`}>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    Anteprima del Conto
-                  </h3>
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div 
-                      className="p-3 md:p-4 rounded-xl border"
-                      style={{ 
-                        backgroundColor: `${selectedType.color}15`, 
-                        borderColor: `${selectedType.color}40`,
-                        boxShadow: `0 2px 8px ${selectedType.color}15`
-                      }}
-                    >
-                      <selectedType.icon className="w-5 h-5 md:w-6 md:h-6" style={{ color: selectedType.color }} />
+              {/* Right Column - Preview */}
+              <div className="space-y-4 md:space-y-6">
+                {name && selectedType ? (
+                  <div className={`p-4 md:p-6 ${theme.background.card} rounded-xl ${theme.border.card} border`}>
+                    <h3 className={`${theme.text.primary} font-semibold mb-3 md:mb-4 text-sm md:text-base flex items-center gap-2`}>
+                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                      Anteprima del Conto
+                    </h3>
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div 
+                        className="p-3 md:p-4 rounded-xl border"
+                        style={{ 
+                          backgroundColor: `${color || selectedType.color}15`, 
+                          borderColor: `${color || selectedType.color}40`,
+                          boxShadow: `0 2px 8px ${color || selectedType.color}15`
+                        }}
+                      >
+                        <selectedType.icon 
+                          className="w-5 h-5 md:w-6 md:h-6" 
+                          style={{ color: color || selectedType.color }} 
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className={`font-semibold ${theme.text.primary} text-sm md:text-base`}>
+                          {name}
+                        </h4>
+                        <p className={`${theme.text.muted} text-xs md:text-sm`}>
+                          {selectedType.label}
+                        </p>
+                        <p 
+                          className="font-bold text-sm md:text-base mt-1" 
+                          style={{ color: color || selectedType.color }}
+                        >
+                          {currency === 'EUR' && '€'}
+                          {currency === 'USD' && '$'}
+                          {currency === 'GBP' && '£'}
+                          {balance ? parseFloat(balance).toFixed(2) : '0.00'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h4 className={`font-semibold ${theme.text.primary} text-sm md:text-base`}>{name}</h4>
-                      <p className={`${theme.text.muted} text-xs md:text-sm`}>{bank || "Banca non selezionata"}</p>
-                      <p className="font-bold text-sm md:text-base mt-1" style={{ color: selectedType.color }}>
-                        {balance ? `€${parseFloat(balance).toFixed(2)}` : "€0.00"}
+                  </div>
+                ) : (
+                  <div className={`p-4 md:p-6 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
+                    <div className="text-center">
+                      <Wallet className={`w-12 h-12 md:w-16 md:h-16 ${theme.text.muted} mx-auto mb-3 md:mb-4`} />
+                      <h3 className={`${theme.text.primary} font-semibold mb-2 text-sm md:text-base`}>
+                        Compila i Dettagli
+                      </h3>
+                      <p className={`${theme.text.muted} text-xs md:text-sm`}>
+                        Inserisci nome e tipo di conto per vedere l'anteprima
                       </p>
                     </div>
                   </div>
-                </div>
-              ) : (
+                )}
+
+                {/* Info Card */}
                 <div className={`p-4 md:p-6 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
-                  <div className="text-center">
-                    <Wallet className={`w-12 h-12 md:w-16 md:h-16 ${theme.text.muted} mx-auto mb-3 md:mb-4`} />
-                    <h3 className={`${theme.text.primary} font-semibold mb-2 text-sm md:text-base`}>Compila i Dettagli</h3>
-                    <p className={`${theme.text.muted} text-xs md:text-sm`}>
-                      Inserisci nome e tipo di conto per vedere l'anteprima
-                    </p>
-                  </div>
+                  <h4 className={`${theme.text.primary} font-semibold mb-2 md:mb-3 text-sm md:text-base`}>
+                    💡 Suggerimenti
+                  </h4>
+                  <ul className={`${theme.text.muted} text-xs md:text-sm space-y-2`}>
+                    <li>• Usa nomi descrittivi per identificare facilmente i tuoi conti</li>
+                    <li>• Il saldo può essere aggiornato in qualsiasi momento</li>
+                    <li>• Seleziona il tipo di conto più appropriato per una migliore organizzazione</li>
+                    <li>• I colori aiutano a distinguere visivamente i diversi conti</li>
+                  </ul>
                 </div>
-              )}
-
-              {/* Info Card */}
-              <div className={`p-4 md:p-6 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
-                <h4 className={`${theme.text.primary} font-semibold mb-2 md:mb-3 text-sm md:text-base`}>Suggerimenti</h4>
-                <ul className={`${theme.text.muted} text-xs md:text-sm space-y-2`}>
-                  <li>• Usa nomi descrittivi per identificare facilmente i tuoi conti</li>
-                  <li>• Il saldo può essere aggiornato in qualsiasi momento</li>
-                  <li>• Seleziona il tipo di conto più appropriato per una migliore organizzazione</li>
-                </ul>
               </div>
+
             </div>
-
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className={`p-4 md:p-6 ${theme.border.card} border-t flex-shrink-0`}>
-          <div className="flex flex-col sm:flex-row justify-end gap-2 md:gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className={`px-4 py-2 md:px-6 md:py-3 rounded-xl ${theme.background.card} ${theme.border.input} border ${theme.text.secondary} font-semibold hover:bg-gray-600/50 dark:hover:bg-gray-600/50 light:hover:bg-gray-200/50 hover:text-gray-50 dark:hover:text-gray-50 light:hover:text-gray-900 transition-all text-sm md:text-base`}
-            >
-              Annulla
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!name || !bank}
-              className="px-4 py-2 md:px-6 md:py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-            >
-              <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
-              {isNew ? "Aggiungi" : "Aggiorna"} Conto
-            </button>
+          {/* Footer */}
+          <div className={`p-4 md:p-6 ${theme.border.card} border-t flex-shrink-0`}>
+            <div className="flex flex-col sm:flex-row justify-end gap-2 md:gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className={`px-4 py-2 md:px-6 md:py-3 rounded-xl ${theme.background.card} ${theme.border.input} border ${theme.text.secondary} font-semibold hover:bg-gray-600/50 dark:hover:bg-gray-600/50 light:hover:bg-gray-200/50 hover:text-gray-50 dark:hover:text-gray-50 light:hover:text-gray-900 transition-all text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Annulla
+              </button>
+              <button
+                type="submit"
+                disabled={!name || !type || isSubmitting}
+                className="px-4 py-2 md:px-6 md:py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                    {isNew ? "Creazione..." : "Aggiornamento..."}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
+                    {isNew ? "Aggiungi" : "Aggiorna"} Conto
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

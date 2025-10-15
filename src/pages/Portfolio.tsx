@@ -1,4 +1,4 @@
-// src/pages/Portfolio.tsx - SOLO DATI REALI
+// src/pages/Portfolio.tsx - CORRETTO PER COMPATIBILITÀ MODALI
 import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Wallet, CreditCard, PiggyBank, TrendingUp, Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, History, DollarSign, Building, Landmark, MoreVertical, Edit, Trash2, ArrowLeftRight, RefreshCw } from "lucide-react";
@@ -16,16 +16,21 @@ import {
   adjustAccountBalanceApi,
 } from "../api/accountsApi";
 
-// Type per Account compatibile con componenti esistenti
+// ✅ TIPO UNIFICATO per compatibilità con modali
 export type Account = {
   id: string;
   name: string;
   type: string;
-  bank?: string;
   balance: number;
   currency: string;
-  color: string;
-  icon: any;
+  color?: string;           // ✅ Opzionale come nei modali
+  icon?: string;            // ✅ Opzionale e string
+  isActive?: boolean;
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Campi UI opzionali per compatibilità
+  bank?: string;
   lastTransaction?: string;
 };
 
@@ -60,6 +65,7 @@ const Portfolio: React.FC = () => {
     loadAccounts();
   }, []);
 
+  // ✅ LOAD ACCOUNTS corretto con gestione fallback
   const loadAccounts = async () => {
     try {
       setIsLoading(true);
@@ -69,11 +75,16 @@ const Portfolio: React.FC = () => {
         id: acc.id,
         name: acc.name,
         type: acc.type,
-        bank: '',
         balance: acc.balance,
         currency: acc.currency,
         color: acc.color || getDefaultColorForType(acc.type),
-        icon: getIconForType(acc.type),
+        icon: acc.icon || acc.type,
+        isActive: acc.isActive,
+        userId: acc.userId,
+        createdAt: acc.createdAt,
+        updatedAt: acc.updatedAt,
+        // Campi UI opzionali
+        bank: '', // Non viene dal backend
         lastTransaction: acc.updatedAt
       }));
       
@@ -87,11 +98,13 @@ const Portfolio: React.FC = () => {
     }
   };
 
+  // ✅ ICON HELPERS aggiornati
   const getIconForType = (type: string) => {
     switch (type) {
       case 'checking': return Landmark;
       case 'savings': return PiggyBank;
       case 'prepaid': 
+      case 'card':
       case 'credit_card': return CreditCard;
       case 'business':
       case 'investment': return Building;
@@ -100,11 +113,18 @@ const Portfolio: React.FC = () => {
     }
   };
 
+  const renderAccountIcon = (account: Account) => {
+    // Se l'account ha un'icona specifica, usala, altrimenti usa quella del tipo
+    const IconComponent = getIconForType(account.icon || account.type);
+    return IconComponent;
+  };
+
   const getDefaultColorForType = (type: string): string => {
     switch (type) {
       case 'checking': return '#6366F1';
       case 'savings': return '#10B981';
       case 'prepaid':
+      case 'card':
       case 'credit_card': return '#F59E0B';
       case 'business':
       case 'investment': return '#8B5CF6';
@@ -202,26 +222,26 @@ const Portfolio: React.FC = () => {
     }
   };
 
+  // ✅ SAVE ACCOUNT corretto con gestione campi opzionali
   const handleSaveAccount = async (accountData: any) => {
     try {
       if (editingAccount) {
+        // Update existing account
         const updated = await updateAccountApi(editingAccount.id, {
           name: accountData.name,
           type: accountData.type,
           balance: parseFloat(accountData.balance) || 0,
-          color: accountData.color || getDefaultColorForType(accountData.type)
+          currency: accountData.currency || 'EUR',
+          color: accountData.color || getDefaultColorForType(accountData.type),
+          icon: accountData.icon || accountData.type
         });
         
         const updatedAccount: Account = {
-          id: updated.id,
-          name: updated.name,
-          type: updated.type,
+          ...updated,
           bank: accountData.bank || '',
-          balance: updated.balance,
-          currency: updated.currency,
+          lastTransaction: updated.updatedAt,
           color: updated.color || getDefaultColorForType(updated.type),
-          icon: getIconForType(updated.type),
-          lastTransaction: updated.updatedAt
+          icon: updated.icon || updated.type
         };
         
         setAccounts(prev => prev.map(acc => 
@@ -239,24 +259,22 @@ const Portfolio: React.FC = () => {
         
         addToast(`Conto "${accountData.name}" modificato con successo`, 'success');
       } else {
+        // Create new account  
         const created = await createAccountApi({
           name: accountData.name,
           type: accountData.type,
           balance: parseFloat(accountData.balance) || 0,
-          currency: 'EUR',
-          color: accountData.color || getDefaultColorForType(accountData.type)
+          currency: accountData.currency || 'EUR',
+          color: accountData.color || getDefaultColorForType(accountData.type),
+          icon: accountData.icon || accountData.type
         });
         
         const newAccount: Account = {
-          id: created.id,
-          name: created.name,
-          type: created.type,
+          ...created,
           bank: accountData.bank || '',
-          balance: created.balance,
-          currency: created.currency,
+          lastTransaction: created.createdAt,
           color: created.color || getDefaultColorForType(created.type),
-          icon: getIconForType(created.type),
-          lastTransaction: created.createdAt
+          icon: created.icon || created.type
         };
         
         setAccounts(prev => [...prev, newAccount]);
@@ -281,9 +299,10 @@ const Portfolio: React.FC = () => {
     }
   };
 
-  const handleTransfer = async (fromId: string, toId: string, amount: number, description?: string) => {
-    const fromAccount = accounts.find(acc => acc.id === fromId);
-    const toAccount = accounts.find(acc => acc.id === toId);
+  // ✅ TRANSFER HANDLER corretto con string IDs
+  const handleTransfer = async (fromAccountId: string, toAccountId: string, amount: number, description?: string) => {
+    const fromAccount = accounts.find(acc => acc.id === fromAccountId);
+    const toAccount = accounts.find(acc => acc.id === toAccountId);
     
     if (!fromAccount || !toAccount) {
       addToast('Conti non trovati', 'error');
@@ -296,13 +315,13 @@ const Portfolio: React.FC = () => {
     }
 
     try {
-      await transferBetweenAccountsApi(fromId, toId, amount, description);
+      await transferBetweenAccountsApi(fromAccountId, toAccountId, amount, description);
       
       setAccounts(prev => prev.map(acc => {
-        if (acc.id === fromId) {
+        if (acc.id === fromAccountId) {
           return { ...acc, balance: acc.balance - amount, lastTransaction: new Date().toISOString() };
         }
-        if (acc.id === toId) {
+        if (acc.id === toAccountId) {
           return { ...acc, balance: acc.balance + amount, lastTransaction: new Date().toISOString() };
         }
         return acc;
@@ -332,6 +351,7 @@ const Portfolio: React.FC = () => {
     setOpenMenuId(null);
   };
 
+  // ✅ BALANCE ADJUST HANDLER corretto con string ID
   const handleSaveBalanceAdjustment = async (accountId: string, newBalance: number, reason: string) => {
     const account = accounts.find(acc => acc.id === accountId);
     if (!account) return;
@@ -396,6 +416,7 @@ const Portfolio: React.FC = () => {
       case 'checking': return 'Conto Corrente';
       case 'savings': return 'Conto Risparmio';
       case 'prepaid': 
+      case 'card':
       case 'credit_card': return 'Carta';
       case 'business': 
       case 'investment': return 'Business';
@@ -424,7 +445,7 @@ const Portfolio: React.FC = () => {
   const accountsChartData = accounts.map(account => ({
     name: account.name,
     value: account.balance,
-    color: account.color
+    color: account.color || getDefaultColorForType(account.type)
   }));
 
   if (isLoading) {
@@ -530,26 +551,27 @@ const Portfolio: React.FC = () => {
             {/* Accounts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {accounts.map((account) => {
-                const IconComponent = account.icon;
+                const IconComponent = renderAccountIcon(account); // ✅ Uso la funzione corretta
+                const accountColor = account.color || getDefaultColorForType(account.type);
                 return (
                   <div 
                     key={account.id} 
                     className={`${theme.background.card} ${theme.border.card} ${theme.background.cardHover} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden`}
                   >
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300"
-                         style={{ background: `linear-gradient(135deg, ${account.color}20, transparent)` }} />
+                         style={{ background: `linear-gradient(135deg, ${accountColor}20, transparent)` }} />
                     
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-3">
                         <div 
                           className="p-2 rounded-xl border shadow-sm"
                           style={{ 
-                            backgroundColor: `${account.color}15`, 
-                            borderColor: `${account.color}30`,
-                            boxShadow: `0 2px 8px ${account.color}15`
+                            backgroundColor: `${accountColor}15`, 
+                            borderColor: `${accountColor}30`,
+                            boxShadow: `0 2px 8px ${accountColor}15`
                           }}
                         >
-                          <IconComponent className="w-5 h-5" style={{ color: account.color }} />
+                          <IconComponent className="w-5 h-5" style={{ color: accountColor }} />
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -605,7 +627,7 @@ const Portfolio: React.FC = () => {
                       </div>
                       
                       <div className="mb-3">
-                        <div className="text-lg font-bold leading-tight" style={{ color: account.color }}>
+                        <div className="text-lg font-bold leading-tight" style={{ color: accountColor }}>
                           {showBalance ? formatCurrency(account.balance) : "••••••"}
                         </div>
                       </div>
@@ -655,10 +677,11 @@ const Portfolio: React.FC = () => {
                   <div className="flex flex-col justify-center space-y-2">
                     {accounts.map((account) => {
                       const percentage = ((account.balance / totalBalance) * 100).toFixed(1);
+                      const accountColor = account.color || getDefaultColorForType(account.type);
                       return (
                         <div key={account.id} className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: account.color }}></div>
+                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: accountColor }}></div>
                             <span className={`${theme.text.secondary} truncate`}>{account.name}</span>
                           </div>
                           <span className={`font-semibold ${theme.text.primary} ml-2`}>{percentage}%</span>
