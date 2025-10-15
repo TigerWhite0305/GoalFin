@@ -1,4 +1,4 @@
-// src/api/index.ts
+// frontend/src/api/index.ts
 
 // Export client axios configurato
 export { default as apiClient } from './axiosConfig';
@@ -16,6 +16,20 @@ export {
   type AuthResponse,
   type UserResponse,
 } from './authApi';
+
+// Export API accounts (Portfolio)
+export {
+  createAccountApi,
+  getAccountsApi,
+  getAccountByIdApi,
+  updateAccountApi,
+  deleteAccountApi,
+  getAccountsSummaryApi,
+  type Account,
+  type CreateAccountData,
+  type UpdateAccountData,
+  type AccountsSummary,
+} from './accountsApi';
 
 // Export utility token
 export {
