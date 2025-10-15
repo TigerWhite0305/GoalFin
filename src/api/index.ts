@@ -25,6 +25,8 @@ export {
   updateAccountApi,
   deleteAccountApi,
   getAccountsSummaryApi,
+  transferBetweenAccountsApi,
+  adjustAccountBalanceApi,
   type Account,
   type CreateAccountData,
   type UpdateAccountData,

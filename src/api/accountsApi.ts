@@ -146,3 +146,61 @@ export const getAccountsSummaryApi = async (): Promise<AccountsSummary> => {
     };
   }
 };
+
+/**
+ * Trasferisce denaro tra due conti
+ */
+export const transferBetweenAccountsApi = async (
+  fromAccountId: string,
+  toAccountId: string,
+  amount: number,
+  description?: string
+): Promise<{
+  from: Account;
+  to: Account;
+  amount: number;
+  description?: string;
+}> => {
+  try {
+    const response = await apiClient.post<ApiResponse<any>>('/accounts/transfer', {
+      fromAccountId,
+      toAccountId,
+      amount,
+      description
+    });
+    return response.data.data;
+  } catch (error: any) {
+    throw error.response?.data || { 
+      success: false, 
+      message: 'Errore durante il trasferimento' 
+    };
+  }
+};
+
+/**
+ * Aggiusta il saldo di un conto
+ */
+export const adjustAccountBalanceApi = async (
+  accountId: string,
+  newBalance: number,
+  reason?: string
+): Promise<{
+  account: Account;
+  oldBalance: number;
+  newBalance: number;
+  difference: number;
+  reason?: string;
+}> => {
+  try {
+    const response = await apiClient.put<ApiResponse<any>>(`/accounts/${accountId}/balance`, {
+      newBalance,
+      reason
+    });
+    return response.data.data;
+  } catch (error: any) {
+    throw error.response?.data || { 
+      success: false, 
+      message: 'Errore durante l\'aggiustamento del saldo' 
+    };
+  }
+};
