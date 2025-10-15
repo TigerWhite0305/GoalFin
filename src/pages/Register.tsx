@@ -1,5 +1,6 @@
+// src/pages/Register.tsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, TrendingUp, Check, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -38,7 +39,7 @@ const RegisterPage = () => {
     setError('');
   };
 
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -78,9 +79,9 @@ const RegisterPage = () => {
       });
       
       if (response.success) {
-        // Login automatico dopo registrazione
+        // Login automatico dopo registrazione (ID è già string UUID)
         const userData = {
-          id: response.data.user.id, // Mantieni come string UUID
+          id: response.data.user.id, // ← Rimosso parseInt, è già string
           name: response.data.user.name,
           email: response.data.user.email,
         };
@@ -101,203 +102,252 @@ const RegisterPage = () => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isLoading && formData.name && formData.email && formData.password && formData.confirmPassword) {
-      handleSubmit(e as any);
-    }
-  };
-
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'} flex items-center justify-center p-4 transition-colors duration-300`}>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-1/4 left-1/4 w-96 h-96 ${isDarkMode ? 'bg-indigo-500/10' : 'bg-indigo-500/20'} rounded-full blur-3xl`}></div>
-        <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 ${isDarkMode ? 'bg-emerald-500/10' : 'bg-emerald-500/20'} rounded-full blur-3xl`}></div>
-      </div>
-
-      {/* Toggle Tema */}
+    <div className={`min-h-screen flex items-center justify-center p-6 ${
+      isDarkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'
+    }`}>
+      {/* Theme Toggle */}
       <button
         onClick={toggleTheme}
-        className={`fixed top-6 right-6 z-50 w-12 h-12 ${isDarkMode ? 'bg-slate-800/80 hover:bg-slate-700/80 text-amber-400 border-slate-700/50' : 'bg-white/80 hover:bg-slate-100/80 text-indigo-600 border-slate-200/50'} backdrop-blur-xl border rounded-xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl`}
+        className={`fixed top-6 right-6 p-3 rounded-full transition-all duration-300 ${
+          isDarkMode 
+            ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
+            : 'bg-white text-gray-700 hover:bg-gray-100 shadow-lg'
+        }`}
+        aria-label="Toggle theme"
       >
-        {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
       </button>
 
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-emerald-500 rounded-2xl mb-4 shadow-lg">
-            <TrendingUp className="w-8 h-8 text-white" />
+      <div className={`w-full max-w-md ${
+        isDarkMode ? 'bg-gray-800' : 'bg-white'
+      } rounded-2xl shadow-2xl overflow-hidden`}>
+        
+        {/* Header */}
+        <div className={`p-8 text-center ${
+          isDarkMode 
+            ? 'bg-gradient-to-r from-blue-600 to-purple-600' 
+            : 'bg-gradient-to-r from-blue-500 to-purple-500'
+        }`}>
+          <div className="flex justify-center mb-4">
+            <div className="bg-white/20 backdrop-blur-sm p-4 rounded-full">
+              <TrendingUp size={48} className="text-white" />
+            </div>
           </div>
-          <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'} mb-2`}>
-            Crea il tuo Account
-          </h1>
-          <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-            Inizia a gestire le tue finanze oggi stesso
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Crea Account</h1>
+          <p className="text-white/90">Inizia a gestire i tuoi investimenti</p>
         </div>
 
-        <div className={`${isDarkMode ? 'bg-slate-800/60 border-slate-700/50' : 'bg-white/80 border-slate-200/50'} backdrop-blur-xl border rounded-2xl p-8 shadow-2xl`}>
-          <div className="space-y-5">
+        {/* Form */}
+        <div className="p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            
+            {/* Nome */}
             <div>
-              <label className={`block ${isDarkMode ? 'text-slate-300' : 'text-slate-700'} font-medium mb-2 text-sm`}>Nome Completo</label>
+              <label className={`block text-sm font-medium mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Nome completo
+              </label>
               <div className="relative">
-                <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+                  isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                }`} size={20} />
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  onKeyDown={handleKeyPress}
                   placeholder="Mario Rossi"
-                  className={`w-full pl-12 pr-4 py-3 ${isDarkMode ? 'bg-slate-900/50 border-slate-700/50 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-xl focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none`}
                   disabled={isLoading}
+                  className={`w-full pl-11 pr-4 py-3 rounded-lg border transition-all ${
+                    isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                      : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50`}
                 />
               </div>
             </div>
 
+            {/* Email */}
             <div>
-              <label className={`block ${isDarkMode ? 'text-slate-300' : 'text-slate-700'} font-medium mb-2 text-sm`}>Email</label>
+              <label className={`block text-sm font-medium mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Email
+              </label>
               <div className="relative">
-                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+                  isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                }`} size={20} />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  onKeyDown={handleKeyPress}
-                  placeholder="mario@esempio.com"
-                  className={`w-full pl-12 pr-4 py-3 ${isDarkMode ? 'bg-slate-900/50 border-slate-700/50 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-xl focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none`}
+                  placeholder="nome@email.com"
                   disabled={isLoading}
+                  className={`w-full pl-11 pr-4 py-3 rounded-lg border transition-all ${
+                    isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                      : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50`}
                 />
               </div>
             </div>
 
+            {/* Password */}
             <div>
-              <label className={`block ${isDarkMode ? 'text-slate-300' : 'text-slate-700'} font-medium mb-2 text-sm`}>Password</label>
+              <label className={`block text-sm font-medium mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Password
+              </label>
               <div className="relative">
-                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+                  isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                }`} size={20} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  onKeyDown={handleKeyPress}
                   placeholder="••••••••"
-                  className={`w-full pl-12 pr-12 py-3 ${isDarkMode ? 'bg-slate-900/50 border-slate-700/50 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-xl focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none`}
                   disabled={isLoading}
+                  className={`w-full pl-11 pr-12 py-3 rounded-lg border transition-all ${
+                    isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                      : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className={`absolute right-4 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700'} transition-colors`}
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                    isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                  } transition-colors`}
                   disabled={isLoading}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-
-              {formData.password && (
-                <div className="mt-3 space-y-2">
-                  {[
-                    { key: 'minLength', label: 'Almeno 8 caratteri' },
-                    { key: 'hasUpperCase', label: 'Una lettera maiuscola' },
-                    { key: 'hasLowerCase', label: 'Una lettera minuscola' },
-                    { key: 'hasNumber', label: 'Un numero' }
-                  ].map(({ key, label }) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordRequirements[key as keyof typeof passwordRequirements] ? 'bg-emerald-500' : isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}>
-                        {passwordRequirements[key as keyof typeof passwordRequirements] && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                      <span className={`text-xs ${passwordRequirements[key as keyof typeof passwordRequirements] ? 'text-emerald-400' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
+            {/* Conferma Password */}
             <div>
-              <label className={`block ${isDarkMode ? 'text-slate-300' : 'text-slate-700'} font-medium mb-2 text-sm`}>Conferma Password</label>
+              <label className={`block text-sm font-medium mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Conferma Password
+              </label>
               <div className="relative">
-                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+                  isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                }`} size={20} />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  onKeyDown={handleKeyPress}
                   placeholder="••••••••"
-                  className={`w-full pl-12 pr-12 py-3 ${isDarkMode ? 'bg-slate-900/50 border-slate-700/50 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-xl focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none`}
                   disabled={isLoading}
+                  className={`w-full pl-11 pr-12 py-3 rounded-lg border transition-all ${
+                    isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                      : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className={`absolute right-4 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700'} transition-colors`}
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                    isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                  } transition-colors`}
                   disabled={isLoading}
                 >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-                <p className="text-red-400 text-sm">{error}</p>
+            {/* Requisiti Password */}
+            {formData.password && (
+              <div className={`p-4 rounded-lg ${
+                isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+              }`}>
+                <p className={`text-xs font-medium mb-2 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Requisiti password:
+                </p>
+                <div className="space-y-1">
+                  {[
+                    { check: passwordRequirements.minLength, text: 'Almeno 8 caratteri' },
+                    { check: passwordRequirements.hasUpperCase, text: 'Una lettera maiuscola' },
+                    { check: passwordRequirements.hasLowerCase, text: 'Una lettera minuscola' },
+                    { check: passwordRequirements.hasNumber, text: 'Un numero' },
+                  ].map((req, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Check 
+                        size={16} 
+                        className={req.check ? 'text-green-500' : 'text-gray-400'} 
+                      />
+                      <span className={`text-xs ${
+                        req.check 
+                          ? 'text-green-500' 
+                          : isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        {req.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
+            {/* Messaggio Errore */}
+            {error && (
+              <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                <p className="text-sm text-red-500 text-center">{error}</p>
+              </div>
+            )}
+
+            {/* Submit Button */}
             <button
-              onClick={handleSubmit}
-              disabled={isLoading || !formData.name || !formData.email || !formData.password || !formData.confirmPassword}
-              className="w-full bg-gradient-to-r from-indigo-500 to-emerald-500 hover:from-indigo-600 hover:to-emerald-600 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              type="submit"
+              disabled={isLoading || !isPasswordValid}
+              className={`w-full py-3 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
+                isDarkMode
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
+                  : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
+              } text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Registrazione in corso...</span>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Registrazione in corso...
                 </>
               ) : (
                 <>
-                  <User className="w-5 h-5" />
-                  <span>Crea Account</span>
+                  <User size={20} />
+                  Registrati
                 </>
               )}
             </button>
 
-            <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} text-xs text-center`}>
-              Registrandoti accetti i nostri{' '}
-              <button className={`${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} underline transition-colors`}>
-                Termini di Servizio
-              </button>{' '}
-              e la{' '}
-              <button className={`${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} underline transition-colors`}>
-                Privacy Policy
-              </button>
-            </p>
-          </div>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className={`w-full border-t ${isDarkMode ? 'border-slate-700/50' : 'border-slate-300/50'}`}></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className={`px-4 ${isDarkMode ? 'bg-slate-800/60 text-slate-400' : 'bg-white/80 text-slate-600'}`}>oppure</span>
-            </div>
-          </div>
-
-          <div className="text-center">
-            <p className={`${isDarkMode ? 'text-slate-400' : 'text-slate-600'} text-sm`}>
+            {/* Link Login */}
+            <p className={`text-center text-sm ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-600'
+            }`}>
               Hai già un account?{' '}
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className={`${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} font-semibold transition-colors`}
+              <Link 
+                to="/login" 
+                className="text-blue-500 hover:text-blue-600 font-semibold transition-colors"
               >
                 Accedi
-              </button>
+              </Link>
             </p>
-          </div>
+          </form>
         </div>
       </div>
     </div>

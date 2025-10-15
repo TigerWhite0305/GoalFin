@@ -15,6 +15,7 @@ export interface RegisterData {
 export interface LoginData {
   email: string;
   password: string;
+  rememberMe?: boolean; // ← AGGIUNTO
 }
 
 export interface User {
@@ -68,18 +69,26 @@ export const registerApi = async (data: RegisterData): Promise<AuthResponse> => 
 };
 
 /**
- * Login utente
- * @param data Dati login (email, password)
+ * Login utente con supporto "Ricordami"
+ * @param data Dati login (email, password, rememberMe)
  * @returns Promise con user e token
  */
 export const loginApi = async (data: LoginData): Promise<AuthResponse> => {
   try {
-    const response = await apiClient.post<AuthResponse>('/auth/login', data);
+    // Invia rememberMe al backend
+    const response = await apiClient.post<AuthResponse>('/auth/login', {
+      email: data.email,
+      password: data.password,
+      rememberMe: data.rememberMe || false // ← Default false
+    });
     
     // Salva token e user nel localStorage
     if (response.data.success) {
       saveToken(response.data.data.token);
       saveUser(response.data.data.user);
+      
+      // Log durata token (rimuovere in production)
+      console.log(`🔐 Token salvato - Durata: ${data.rememberMe ? '90 giorni' : '24 ore'}`);
     }
     
     return response.data;
