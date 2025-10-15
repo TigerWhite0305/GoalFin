@@ -43,7 +43,7 @@ const LoginPage = () => {
       if (response.success) {
         // Salva utente nel context (AuthContext)
         const userData = {
-          id: parseInt(response.data.user.id), // Converti string UUID a number se necessario
+          id: response.data.user.id, // Mantieni come string UUID
           name: response.data.user.name,
           email: response.data.user.email,
         };
