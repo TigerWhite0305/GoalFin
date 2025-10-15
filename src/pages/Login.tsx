@@ -203,7 +203,7 @@ const LoginPage = () => {
                 <span className={`text-sm ${
                   isDarkMode ? 'text-gray-300' : 'text-gray-700'
                 }`}>
-                  Ricordami per 3 mesi
+                  Ricordami
                 </span>
               </label>
 

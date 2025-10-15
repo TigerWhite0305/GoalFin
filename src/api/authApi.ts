@@ -54,8 +54,9 @@ export const registerApi = async (data: RegisterData): Promise<AuthResponse> => 
     const response = await apiClient.post<AuthResponse>('/auth/register', data);
     
     // Salva token e user nel localStorage
+    // Registrazione usa token 24h (rememberMe = false)
     if (response.data.success) {
-      saveToken(response.data.data.token);
+      saveToken(response.data.data.token, false); // ← 24h
       saveUser(response.data.data.user);
     }
     
@@ -82,13 +83,14 @@ export const loginApi = async (data: LoginData): Promise<AuthResponse> => {
       rememberMe: data.rememberMe || false // ← Default false
     });
     
-    // Salva token e user nel localStorage
+    // Salva token con il nome corretto in base a rememberMe
     if (response.data.success) {
-      saveToken(response.data.data.token);
+      saveToken(response.data.data.token, data.rememberMe || false); // ← Passa rememberMe
       saveUser(response.data.data.user);
       
-      // Log durata token (rimuovere in production)
-      console.log(`🔐 Token salvato - Durata: ${data.rememberMe ? '90 giorni' : '24 ore'}`);
+      // Log durata token
+      const tokenName = data.rememberMe ? 'goalfintoken90' : 'goalfintoken24';
+      console.log(`🔐 Token salvato come: ${tokenName} - Durata: ${data.rememberMe ? '90 giorni' : '24 ore'}`);
     }
     
     return response.data;

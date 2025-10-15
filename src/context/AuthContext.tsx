@@ -30,10 +30,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Controlla se c'è un token in localStorage
+        const token = localStorage.getItem('goalfintoken24') || localStorage.getItem('goalfintoken90');
+        
+        if (!token) {
+          console.log('🔴 Nessun token trovato');
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('🟢 Token trovato, verifica validità...');
         const userData = await getMeApi();
         setUser(userData);
+        console.log('✅ Utente autenticato:', userData.name);
       } catch (error) {
-        console.log('Utente non autenticato');
+        console.log('🔴 Token non valido o scaduto');
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -53,7 +65,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, isLoading }}>
-      {children}
+      {isLoading ? (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

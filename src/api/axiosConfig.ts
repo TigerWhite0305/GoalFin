@@ -46,18 +46,25 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     // Token scaduto o non valido
     if (error.response?.status === 401) {
-      clearAuth();
-      window.location.href = '/login';
+      // Controlla se siamo già nella pagina di login per evitare loop
+      const isLoginPage = window.location.pathname === '/login';
+      const isRegisterPage = window.location.pathname === '/register';
+      
+      if (!isLoginPage && !isRegisterPage) {
+        clearAuth();
+        console.log('🔴 Token scaduto o invalido - Redirect a login');
+        window.location.href = '/login';
+      }
     }
     
     // Accesso negato
     if (error.response?.status === 403) {
-      console.error('Accesso negato');
+      console.error('❌ Accesso negato');
     }
     
     // Errore server
     if (error.response?.status === 500) {
-      console.error('Errore del server');
+      console.error('❌ Errore del server');
     }
     
     return Promise.reject(error);
