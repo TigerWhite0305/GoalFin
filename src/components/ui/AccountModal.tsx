@@ -1,11 +1,11 @@
-// src/components/modals/AccountModal.tsx - AGGIORNATO PER BACKEND REALE
+// src/components/modals/AccountModal.tsx - CON COLOR PICKER AVANZATO
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2 } from "lucide-react";
+import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2, Palette } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-// ✅ TIPO AGGIORNATO per essere compatibile con il backend
+// Tipo Account compatibile con backend
 export type Account = {
-  id: string;          // ✅ string UUID (non number)
+  id: string;
   name: string;
   type: string;
   balance: number;
@@ -16,8 +16,7 @@ export type Account = {
   userId?: string;
   createdAt?: string;
   updatedAt?: string;
-  // Campi opzionali per compatibilità frontend
-  bank?: string;       // ⚡ Manteniamo per compatibilità UI
+  bank?: string;
   lastTransaction?: string;
 };
 
@@ -25,7 +24,7 @@ interface AccountModalProps {
   account?: Account;
   isNew: boolean;
   onClose: () => void;
-  onSave: (account: any) => Promise<void>; // ✅ Ora è async
+  onSave: (account: any) => Promise<void>;
 }
 
 const AccountModal: React.FC<AccountModalProps> = ({ 
@@ -36,7 +35,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
 }) => {
   const { isDarkMode } = useTheme();
   
-  // ✅ Stati del form aggiornati
+  // Stati del form
   const [name, setName] = useState(account?.name ?? "");
   const [type, setType] = useState(account?.type ?? "checking");
   const [balance, setBalance] = useState(account?.balance?.toString() ?? "");
@@ -44,11 +43,23 @@ const AccountModal: React.FC<AccountModalProps> = ({
   const [color, setColor] = useState(account?.color ?? "");
   const [icon, setIcon] = useState(account?.icon ?? "");
   
-  // ✅ Stati UI per gestire async
+  // Stati UI
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [customColor, setCustomColor] = useState(account?.color ?? "#6366F1");
 
-  // Theme colors matching other modals
+  // Palette colori predefiniti (8 colori)
+  const predefinedColors = [
+    "#6366F1", // Indigo
+    "#10B981", // Emerald
+    "#F59E0B", // Amber
+    "#8B5CF6", // Violet
+    "#EF4444", // Red
+    "#06B6D4", // Cyan
+    "#84CC16", // Lime
+    "#F97316", // Orange
+  ];
+
   const getThemeColors = () => {
     if (isDarkMode) {
       return {
@@ -93,7 +104,6 @@ const AccountModal: React.FC<AccountModalProps> = ({
 
   const theme = getThemeColors();
 
-  // ✅ Aggiornati i tipi di conto per essere compatibili con backend
   const accountTypes = [
     { value: "checking", label: "Conto Corrente", icon: Landmark, color: "#6366F1" },
     { value: "savings", label: "Conto Risparmio", icon: PiggyBank, color: "#10B981" },
@@ -107,11 +117,6 @@ const AccountModal: React.FC<AccountModalProps> = ({
     { value: "GBP", label: "£ Sterlina", flag: "🇬🇧" },
   ];
 
-  const accountColors = [
-    "#6366F1", "#10B981", "#F59E0B", "#8B5CF6", 
-    "#EF4444", "#06B6D4", "#84CC16", "#F97316"
-  ];
-
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -119,7 +124,27 @@ const AccountModal: React.FC<AccountModalProps> = ({
     };
   }, []);
 
-  // ✅ Validazione form migliorata
+  // Auto-set default color when type changes
+  useEffect(() => {
+    if (!color || !account) { // Solo se non c'è un colore già selezionato o stiamo creando
+      const defaultColor = accountTypes.find(t => t.value === type)?.color || "#6366F1";
+      setColor(defaultColor);
+      setCustomColor(defaultColor);
+    }
+  }, [type]);
+
+  // Validazione contrasto colore (semplificata)
+  const isColorTooLight = (hexColor: string): boolean => {
+    const r = parseInt(hexColor.slice(1, 3), 16);
+    const g = parseInt(hexColor.slice(3, 5), 16);
+    const b = parseInt(hexColor.slice(5, 7), 16);
+    
+    // Formula luminanza relativa semplificata
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.8; // Troppo chiaro se > 80%
+  };
+
+  // Validazione form
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -141,11 +166,37 @@ const AccountModal: React.FC<AccountModalProps> = ({
       newErrors.balance = "Il saldo non può essere negativo";
     }
 
+    if (color && isColorTooLight(color)) {
+      newErrors.color = "Colore troppo chiaro, scegli un colore più scuro per una migliore visibilità";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Submit handler asincrono
+  // Handle color selection
+  const handleColorSelection = (selectedColor: string) => {
+    setColor(selectedColor);
+    setCustomColor(selectedColor);
+    
+    // Rimuovi errore colore se presente
+    if (errors.color) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.color;
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle custom color picker
+  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setCustomColor(newColor);
+    handleColorSelection(newColor);
+  };
+
+  // Submit handler asincrono
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -154,7 +205,6 @@ const AccountModal: React.FC<AccountModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // ✅ Dati formattati per il backend
       const accountData = {
         name: name.trim(),
         type,
@@ -168,13 +218,13 @@ const AccountModal: React.FC<AccountModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Errore nel salvataggio:', error);
-      // Il toast error viene gestito nel componente parent
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const selectedType = accountTypes.find(t => t.value === type);
+  const isPredefinedColor = predefinedColors.includes(color);
 
   return (
     <div className={`fixed inset-0 ${theme.background.backdrop} backdrop-blur-sm flex items-center justify-center z-50 p-4`}>
@@ -225,7 +275,6 @@ const AccountModal: React.FC<AccountModalProps> = ({
                           type="button"
                           onClick={() => {
                             setType(accountType.value);
-                            if (!color) setColor(accountType.color);
                             if (!icon) setIcon(accountType.value);
                           }}
                           disabled={isSubmitting}
@@ -308,27 +357,68 @@ const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                 </div>
 
-                {/* Colore Personalizzato */}
+                {/* Color Picker Avanzato */}
                 <div className="flex flex-col gap-2 md:gap-3">
                   <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
                     Colore del Conto
                   </label>
-                  <div className="flex gap-2 flex-wrap">
-                    {accountColors.map((colorOption) => (
+                  
+                  {/* Griglia 3x3 (8 predefiniti + 1 custom) */}
+                  <div className="grid grid-cols-3 gap-2 max-w-[120px]">
+                    {predefinedColors.map((colorOption) => (
                       <button
                         key={colorOption}
                         type="button"
-                        onClick={() => setColor(colorOption)}
-                        className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                        onClick={() => handleColorSelection(colorOption)}
+                        className={`w-10 h-10 rounded-lg border-2 transition-all relative ${
                           color === colorOption 
                             ? 'border-gray-300 scale-110' 
                             : 'border-gray-600 hover:scale-105'
                         }`}
                         style={{ backgroundColor: colorOption }}
                         disabled={isSubmitting}
-                      />
+                      >
+                        {color === colorOption && (
+                          <CheckCircle2 className="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-lg" />
+                        )}
+                      </button>
                     ))}
+                    
+                    {/* Custom Color Picker */}
+                    <div className="relative">
+                      <input
+                        type="color"
+                        value={customColor}
+                        onChange={handleCustomColorChange}
+                        className="w-10 h-10 rounded-lg border-2 border-gray-600 hover:border-gray-400 transition-all cursor-pointer opacity-0 absolute inset-0"
+                        disabled={isSubmitting}
+                      />
+                      <div 
+                        className={`w-10 h-10 rounded-lg border-2 transition-all flex items-center justify-center ${
+                          !isPredefinedColor && color === customColor
+                            ? 'border-gray-300 scale-110' 
+                            : 'border-gray-600 hover:scale-105'
+                        }`}
+                        style={{ 
+                          backgroundColor: isPredefinedColor ? '#4B5563' : customColor 
+                        }}
+                      >
+                        {isPredefinedColor ? (
+                          <Palette className="w-4 h-4 text-gray-300" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 text-white drop-shadow-lg" />
+                        )}
+                      </div>
+                    </div>
                   </div>
+                  
+                  {errors.color && (
+                    <p className="text-red-400 text-xs md:text-sm">{errors.color}</p>
+                  )}
+                  
+                  <p className={`${theme.text.muted} text-xs`}>
+                    Clicca sui colori predefiniti o sull'icona palette per scegliere un colore personalizzato
+                  </p>
                 </div>
               </div>
 
@@ -342,16 +432,16 @@ const AccountModal: React.FC<AccountModalProps> = ({
                     </h3>
                     <div className="flex items-center gap-3 md:gap-4">
                       <div 
-                        className="p-3 md:p-4 rounded-xl border"
+                        className="p-3 md:p-4 rounded-xl border transition-all duration-200"
                         style={{ 
-                          backgroundColor: `${color || selectedType.color}15`, 
-                          borderColor: `${color || selectedType.color}40`,
-                          boxShadow: `0 2px 8px ${color || selectedType.color}15`
+                          backgroundColor: `${color}15`, 
+                          borderColor: `${color}40`,
+                          boxShadow: `0 2px 8px ${color}15`
                         }}
                       >
                         <selectedType.icon 
-                          className="w-5 h-5 md:w-6 md:h-6" 
-                          style={{ color: color || selectedType.color }} 
+                          className="w-5 h-5 md:w-6 md:h-6 transition-colors duration-200" 
+                          style={{ color: color }} 
                         />
                       </div>
                       <div className="flex-1">
@@ -362,8 +452,8 @@ const AccountModal: React.FC<AccountModalProps> = ({
                           {selectedType.label}
                         </p>
                         <p 
-                          className="font-bold text-sm md:text-base mt-1" 
-                          style={{ color: color || selectedType.color }}
+                          className="font-bold text-sm md:text-base mt-1 transition-colors duration-200" 
+                          style={{ color: color }}
                         >
                           {currency === 'EUR' && '€'}
                           {currency === 'USD' && '$'}
@@ -396,7 +486,8 @@ const AccountModal: React.FC<AccountModalProps> = ({
                     <li>• Usa nomi descrittivi per identificare facilmente i tuoi conti</li>
                     <li>• Il saldo può essere aggiornato in qualsiasi momento</li>
                     <li>• Seleziona il tipo di conto più appropriato per una migliore organizzazione</li>
-                    <li>• I colori aiutano a distinguere visivamente i diversi conti</li>
+                    <li>• I colori aiutano a distinguere visualmente i diversi conti</li>
+                    <li>• Evita colori troppo chiari per una migliore leggibilità</li>
                   </ul>
                 </div>
               </div>
@@ -417,7 +508,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!name || !type || isSubmitting}
+                disabled={!name || !type || isSubmitting || Object.keys(errors).length > 0}
                 className="px-4 py-2 md:px-6 md:py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
               >
                 {isSubmitting ? (

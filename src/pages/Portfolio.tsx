@@ -1,5 +1,6 @@
-// src/pages/Portfolio.tsx - CORRETTO PER COMPATIBILITÀ MODALI
+// src/pages/Portfolio.tsx - CON HIGHLIGHT DA RICERCA
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom"; // ✅ AGGIUNTO
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Wallet, CreditCard, PiggyBank, TrendingUp, Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, History, DollarSign, Building, Landmark, MoreVertical, Edit, Trash2, ArrowLeftRight, RefreshCw } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
@@ -16,20 +17,19 @@ import {
   adjustAccountBalanceApi,
 } from "../api/accountsApi";
 
-// ✅ TIPO UNIFICATO per compatibilità con modali
+// TIPO UNIFICATO per compatibilità con modali
 export type Account = {
   id: string;
   name: string;
   type: string;
   balance: number;
   currency: string;
-  color?: string;           // ✅ Opzionale come nei modali
-  icon?: string;            // ✅ Opzionale e string
+  color?: string;
+  icon?: string;
   isActive?: boolean;
   userId?: string;
   createdAt?: string;
   updatedAt?: string;
-  // Campi UI opzionali per compatibilità
   bank?: string;
   lastTransaction?: string;
 };
@@ -37,6 +37,10 @@ export type Account = {
 const Portfolio: React.FC = () => {
   const { isDarkMode } = useTheme();
   const { addToast } = useToast();
+  
+  // ✅ AGGIUNTO per gestire highlight da ricerca
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightedAccountId, setHighlightedAccountId] = useState<string | null>(null);
 
   // States
   const [showBalance, setShowBalance] = useState(true);
@@ -65,7 +69,35 @@ const Portfolio: React.FC = () => {
     loadAccounts();
   }, []);
 
-  // ✅ LOAD ACCOUNTS corretto con gestione fallback
+  // ✅ AGGIUNTO - Gestisce highlight da ricerca
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    if (highlightId && accounts.length > 0) {
+      setHighlightedAccountId(highlightId);
+      
+      // Rimuovi l'highlight dopo 3 secondi
+      const timer = setTimeout(() => {
+        setHighlightedAccountId(null);
+        // Rimuovi il parametro dall'URL senza ricaricare la pagina
+        setSearchParams({});
+      }, 3000);
+      
+      // Scroll al conto evidenziato se esiste
+      setTimeout(() => {
+        const accountElement = document.getElementById(`account-${highlightId}`);
+        if (accountElement) {
+          accountElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 100); // Piccolo delay per assicurarsi che il DOM sia renderizzato
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, setSearchParams, accounts]);
+
+  // LOAD ACCOUNTS corretto con gestione fallback
   const loadAccounts = async () => {
     try {
       setIsLoading(true);
@@ -83,8 +115,7 @@ const Portfolio: React.FC = () => {
         userId: acc.userId,
         createdAt: acc.createdAt,
         updatedAt: acc.updatedAt,
-        // Campi UI opzionali
-        bank: '', // Non viene dal backend
+        bank: '',
         lastTransaction: acc.updatedAt
       }));
       
@@ -98,7 +129,7 @@ const Portfolio: React.FC = () => {
     }
   };
 
-  // ✅ ICON HELPERS aggiornati
+  // ICON HELPERS aggiornati
   const getIconForType = (type: string) => {
     switch (type) {
       case 'checking': return Landmark;
@@ -114,7 +145,6 @@ const Portfolio: React.FC = () => {
   };
 
   const renderAccountIcon = (account: Account) => {
-    // Se l'account ha un'icona specifica, usala, altrimenti usa quella del tipo
     const IconComponent = getIconForType(account.icon || account.type);
     return IconComponent;
   };
@@ -181,7 +211,7 @@ const Portfolio: React.FC = () => {
 
   const theme = getThemeColors();
 
-  // Handlers
+  // Handlers (resto del codice rimane uguale)
   const handleAddAccount = () => {
     setEditingAccount(undefined);
     setIsAccountModalOpen(true);
@@ -222,11 +252,9 @@ const Portfolio: React.FC = () => {
     }
   };
 
-  // ✅ SAVE ACCOUNT corretto con gestione campi opzionali
   const handleSaveAccount = async (accountData: any) => {
     try {
       if (editingAccount) {
-        // Update existing account
         const updated = await updateAccountApi(editingAccount.id, {
           name: accountData.name,
           type: accountData.type,
@@ -259,7 +287,6 @@ const Portfolio: React.FC = () => {
         
         addToast(`Conto "${accountData.name}" modificato con successo`, 'success');
       } else {
-        // Create new account  
         const created = await createAccountApi({
           name: accountData.name,
           type: accountData.type,
@@ -299,7 +326,6 @@ const Portfolio: React.FC = () => {
     }
   };
 
-  // ✅ TRANSFER HANDLER corretto con string IDs
   const handleTransfer = async (fromAccountId: string, toAccountId: string, amount: number, description?: string) => {
     const fromAccount = accounts.find(acc => acc.id === fromAccountId);
     const toAccount = accounts.find(acc => acc.id === toAccountId);
@@ -351,7 +377,6 @@ const Portfolio: React.FC = () => {
     setOpenMenuId(null);
   };
 
-  // ✅ BALANCE ADJUST HANDLER corretto con string ID
   const handleSaveBalanceAdjustment = async (accountId: string, newBalance: number, reason: string) => {
     const account = accounts.find(acc => acc.id === accountId);
     if (!account) return;
@@ -551,13 +576,25 @@ const Portfolio: React.FC = () => {
             {/* Accounts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {accounts.map((account) => {
-                const IconComponent = renderAccountIcon(account); // ✅ Uso la funzione corretta
+                const IconComponent = renderAccountIcon(account);
                 const accountColor = account.color || getDefaultColorForType(account.type);
+                const isHighlighted = highlightedAccountId === account.id; // ✅ AGGIUNTO
+                
                 return (
                   <div 
-                    key={account.id} 
-                    className={`${theme.background.card} ${theme.border.card} ${theme.background.cardHover} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden`}
+                    key={account.id}
+                    id={`account-${account.id}`} // ✅ AGGIUNTO ID per scroll
+                    className={`${theme.background.card} ${theme.border.card} ${theme.background.cardHover} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden ${
+                      isHighlighted 
+                        ? 'ring-4 ring-blue-500/50 shadow-blue-500/25 shadow-2xl scale-105 z-10' // ✅ AGGIUNTO highlight styles
+                        : ''
+                    }`}
                   >
+                    {/* ✅ AGGIUNTO - Overlay animato per highlight */}
+                    {isHighlighted && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 animate-pulse rounded-xl" />
+                    )}
+                    
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300"
                          style={{ background: `linear-gradient(135deg, ${accountColor}20, transparent)` }} />
                     
