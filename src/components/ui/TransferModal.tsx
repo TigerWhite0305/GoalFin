@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, ArrowLeftRight, AlertCircle, Euro, Loader2, Wallet, CheckCircle2, AlertTriangle, TrendingDown, Shield } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
-import { validateTransfer, formatCurrency, TRANSFER_LIMITS } from "../../utils/validations.";
+import { validateTransfer, formatCurrency, TRANSFER_LIMITS } from "../../utils/validations";
 
 // Tipo Account compatibile con backend
 export type Account = {

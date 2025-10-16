@@ -1,8 +1,8 @@
-// src/components/ui/AccountModal.tsx - CON VALIDAZIONI MIGLIORATE (SENZA ValidationMessage)
+// src/components/ui/AccountModal.tsx - CON VALIDAZIONI MIGLIORATE E FIX INIZIALE
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2, Palette, AlertTriangle, AlertCircle } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
-import { validateCompleteAccount, ACCOUNT_MIN_BALANCES, formatCurrency } from "../../utils/validations.";
+import { validateCompleteAccount, ACCOUNT_MIN_BALANCES, formatCurrency } from "../../utils/validations";
 
 // Tipo Account compatibile con backend
 export type Account = {
@@ -51,6 +51,10 @@ const AccountModal: React.FC<AccountModalProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [customColor, setCustomColor] = useState(account?.color ?? "#6366F1");
+  
+  // FIX: Stati per gestire validazione iniziale
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   // Palette colori predefiniti (8 colori)
   const predefinedColors = [
@@ -161,16 +165,22 @@ const AccountModal: React.FC<AccountModalProps> = ({
     }
   }, [type]);
 
-  // Validazione in tempo reale con debounce
+  // FIX: Validazione in tempo reale con debounce - AGGIORNATA
   useEffect(() => {
+    // Dopo il primo render, disabilita l'initialLoad
+    if (initialLoad) {
+      const timer = setTimeout(() => setInitialLoad(false), 100);
+      return () => clearTimeout(timer);
+    }
+
     const timeoutId = setTimeout(() => {
       validateForm();
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [name, type, balance, currency, color]);
+  }, [name, type, balance, currency, color, initialLoad]);
 
-  // Validazione form usando le utilities migliorate
+  // FIX: Validazione form usando le utilities migliorate - AGGIORNATA
   const validateForm = useCallback(() => {
     const validation = validateCompleteAccount(
       name,
@@ -179,19 +189,21 @@ const AccountModal: React.FC<AccountModalProps> = ({
       currency,
       color,
       existingAccounts,
-      account?.id
+      account?.id,
+      initialLoad && !hasUserInteracted // Passa il flag per il caricamento iniziale
     );
 
     setValidationErrors(validation.errors);
     setValidationWarnings(validation.warnings);
 
     return validation.isValid;
-  }, [name, type, balance, currency, color, existingAccounts, account?.id]);
+  }, [name, type, balance, currency, color, existingAccounts, account?.id, initialLoad, hasUserInteracted]);
 
   // Handle color selection
   const handleColorSelection = (selectedColor: string) => {
     setColor(selectedColor);
     setCustomColor(selectedColor);
+    setHasUserInteracted(true);
   };
 
   // Handle custom color picker
@@ -199,6 +211,28 @@ const AccountModal: React.FC<AccountModalProps> = ({
     const newColor = e.target.value;
     setCustomColor(newColor);
     handleColorSelection(newColor);
+  };
+
+  // FIX: Handler per input che marca l'interazione dell'utente
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+    setHasUserInteracted(true);
+  };
+
+  const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBalance(e.target.value);
+    setHasUserInteracted(true);
+  };
+
+  const handleTypeChange = (selectedType: string) => {
+    setType(selectedType);
+    setHasUserInteracted(true);
+    if (!icon) setIcon(selectedType);
+  };
+
+  const handleCurrencyChange = (selectedCurrency: string) => {
+    setCurrency(selectedCurrency);
+    setHasUserInteracted(true);
   };
 
   // Submit handler asincrono
@@ -321,10 +355,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
                         <button
                           key={accountType.value}
                           type="button"
-                          onClick={() => {
-                            setType(accountType.value);
-                            if (!icon) setIcon(accountType.value);
-                          }}
+                          onClick={() => handleTypeChange(accountType.value)}
                           disabled={isSubmitting}
                           className={`p-3 md:p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-1 text-sm md:text-base relative ${
                             type === accountType.value
@@ -355,7 +386,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
                   <input
                     type="text"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={handleNameChange}
                     placeholder="Es. Conto Corrente Principale"
                     className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
                       hasErrors && validationErrors.some(e => e.toLowerCase().includes('nome')) ? 'border-red-400' : ''
@@ -376,7 +407,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
                         type="number"
                         step="0.01"
                         value={balance}
-                        onChange={(e) => setBalance(e.target.value)}
+                        onChange={handleBalanceChange}
                         placeholder="0.00"
                         className={`w-full p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
                           hasErrors && validationErrors.some(e => e.toLowerCase().includes('saldo') || e.toLowerCase().includes('minimo')) ? 'border-red-400' : ''
@@ -396,7 +427,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
                     </label>
                     <select
                       value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
+                      onChange={(e) => handleCurrencyChange(e.target.value)}
                       className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base`}
                       disabled={isSubmitting}
                     >

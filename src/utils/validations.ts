@@ -243,61 +243,67 @@ export function validateCompleteAccount(
   currency: string,
   color: string,
   existingAccounts: Account[] = [],
-  excludeId?: string
+  excludeId?: string,
+  isInitialLoad = false // Nuovo parametro per indicare il caricamento iniziale
 ): ValidationResult {
-  const allErrors: string[] = [];
-  const allWarnings: string[] = [];
+  const errors: string[] = [];
+  const warnings: string[] = [];
 
-  // Valida nome
-  const nameValidation = validateAccountName(name);
-  allErrors.push(...nameValidation.errors);
-  allWarnings.push(...nameValidation.warnings);
+  // Non validare se è il caricamento iniziale e i campi sono vuoti
+  if (isInitialLoad && !name.trim() && !balance.trim()) {
+    return {
+      isValid: true,
+      errors: [],
+      warnings: []
+    };
+  }
 
-  // Controlla duplicati
+  // Validazione nome - solo se l'utente ha iniziato a digitare
+  if (name.trim() || !isInitialLoad) {
+    const nameValidation = validateAccountName(name);
+    errors.push(...nameValidation.errors);
+    warnings.push(...nameValidation.warnings);
+  }
+
+  // Validazione duplicati - solo se c'è un nome
   if (name.trim()) {
     const duplicateValidation = checkDuplicateName(name, existingAccounts, excludeId);
-    allErrors.push(...duplicateValidation.errors);
-    allWarnings.push(...duplicateValidation.warnings);
+    errors.push(...duplicateValidation.errors);
+    warnings.push(...duplicateValidation.warnings);
   }
 
-  // Valida tipo
+  // Validazione tipo
   if (!type) {
-    allErrors.push('Seleziona un tipo di conto');
+    errors.push('Il tipo di conto è obbligatorio');
   }
 
-  // Valida saldo
-  if (balance) {
-    const balanceNum = parseFloat(balance);
-    if (isNaN(balanceNum)) {
-      allErrors.push('Saldo non valido');
-    } else if (type && type in ACCOUNT_MIN_BALANCES) {
-      const balanceValidation = validateAccountBalance(
-        balanceNum, 
-        type as keyof typeof ACCOUNT_MIN_BALANCES
-      );
-      allErrors.push(...balanceValidation.errors);
-      allWarnings.push(...balanceValidation.warnings);
+  // Validazione saldo - solo se l'utente ha inserito qualcosa
+  if (balance.trim()) {
+    const numBalance = parseFloat(balance);
+    if (isNaN(numBalance)) {
+      errors.push('Il saldo deve essere un numero valido');
+    } else {
+      const minBalance = ACCOUNT_MIN_BALANCES[type as keyof typeof ACCOUNT_MIN_BALANCES] ?? 0;
+      if (numBalance < minBalance) {
+        errors.push(`Il saldo non può essere inferiore a ${formatCurrency(minBalance)}`);
+      }
     }
   }
 
-  // Valida valuta
+  // Validazione valuta
   if (!currency) {
-    allErrors.push('Seleziona una valuta');
+    errors.push('La valuta è obbligatoria');
   }
 
-  // Valida colore (se fornito)
-  if (color && !isValidHexColor(color)) {
-    allErrors.push('Colore non valido');
-  }
-
-  if (color && isColorTooLight(color)) {
-    allWarnings.push('Colore troppo chiaro, potrebbe essere difficile da leggere');
+  // Validazione colore - solo warning
+  if (!color) {
+    warnings.push('Nessun colore selezionato, verrà usato quello predefinito');
   }
 
   return {
-    isValid: allErrors.length === 0,
-    errors: allErrors,
-    warnings: allWarnings
+    isValid: errors.length === 0,
+    errors,
+    warnings
   };
 }
 
