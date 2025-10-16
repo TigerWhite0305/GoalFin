@@ -1,4 +1,4 @@
-// src/components/ui/PortfolioErrorStates.tsx
+// src/components/ui/PortfolioErrorStates.tsx - NUOVO FILE
 import React from 'react';
 import { AlertTriangle, RefreshCw, Wifi, WifiOff, Database, Shield, TrendingDown, X, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -194,97 +194,6 @@ const PortfolioErrorState: React.FC<PortfolioErrorStateProps> = ({
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
-
-// Componente per lista di errori
-interface PortfolioErrorListProps {
-  errors: PortfolioError[];
-  onRetry?: (id: string) => void;
-  onDismiss?: (id: string) => void;
-  onViewDetails?: (id: string) => void;
-  onClearAll?: () => void;
-  className?: string;
-  compact?: boolean;
-  maxVisible?: number;
-}
-
-export const PortfolioErrorList: React.FC<PortfolioErrorListProps> = ({
-  errors,
-  onRetry,
-  onDismiss,
-  onViewDetails,
-  onClearAll,
-  className = '',
-  compact = false,
-  maxVisible = 5
-}) => {
-  const { isDarkMode } = useTheme();
-  
-  if (errors.length === 0) return null;
-
-  const visibleErrors = errors.slice(0, maxVisible);
-  const hasMore = errors.length > maxVisible;
-
-  // Raggruppa per gravità
-  const groupedErrors = visibleErrors.reduce((acc, error) => {
-    if (!acc[error.severity]) acc[error.severity] = [];
-    acc[error.severity].push(error);
-    return acc;
-  }, {} as Record<ErrorSeverity, PortfolioError[]>);
-
-  // Ordine di priorità per visualizzazione
-  const severityOrder: ErrorSeverity[] = ['critical', 'high', 'medium', 'low'];
-
-  return (
-    <div className={`space-y-3 ${className}`}>
-      {/* Header con stats e azioni */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className={`w-4 h-4 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
-          <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-            {errors.length} {errors.length === 1 ? 'errore' : 'errori'} attivo{errors.length === 1 ? '' : 'i'}
-          </span>
-          {hasMore && (
-            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              (+{errors.length - maxVisible} nascosti)
-            </span>
-          )}
-        </div>
-        
-        {onClearAll && (
-          <button
-            onClick={onClearAll}
-            className={`text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}
-          >
-            Cancella tutto
-          </button>
-        )}
-      </div>
-      
-      {/* Lista errori raggruppati per gravità */}
-      <div className="space-y-2">
-        {severityOrder.map(severity => {
-          const severityErrors = groupedErrors[severity];
-          if (!severityErrors) return null;
-          
-          return (
-            <div key={severity} className="space-y-2">
-              {severityErrors.map(error => (
-                <PortfolioErrorState
-                  key={error.id}
-                  error={error}
-                  onRetry={onRetry ? () => onRetry(error.id) : undefined}
-                  onDismiss={onDismiss}
-                  onViewDetails={onViewDetails}
-                  compact={compact}
-                />
-              ))}
-            </div>
-          );
-        })}
       </div>
     </div>
   );

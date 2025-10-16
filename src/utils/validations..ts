@@ -1,4 +1,4 @@
-// src/utils/validations.ts
+// src/utils/validations.ts - NUOVO FILE
 import { Account } from "../components/ui/AccountModal";
 
 // Configurazione saldi minimi per tipo conto

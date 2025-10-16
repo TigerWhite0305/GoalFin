@@ -1,11 +1,12 @@
-// src/components/modals/TransferModal.tsx - AGGIORNATO PER BACKEND REALE
-import React, { useState, useEffect } from 'react';
-import { X, ArrowLeftRight, AlertCircle, Euro, Loader2, Wallet } from "lucide-react";
+// src/components/ui/TransferModal.tsx - CON VALIDAZIONI MIGLIORATE (SENZA ValidationMessage)
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, ArrowLeftRight, AlertCircle, Euro, Loader2, Wallet, CheckCircle2, AlertTriangle, TrendingDown, Shield } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { validateTransfer, formatCurrency, TRANSFER_LIMITS } from "../../utils/validations.";
 
-// ✅ TIPO AGGIORNATO per essere compatibile con il backend
+// Tipo Account compatibile con backend
 export type Account = {
-  id: string;          // ✅ string UUID (non number)
+  id: string;          // string UUID (non number)
   name: string;
   type: string;
   balance: number;
@@ -24,7 +25,7 @@ export type Account = {
 interface TransferModalProps {
   accounts: Account[];
   onClose: () => void;
-  onTransfer: (fromAccountId: string, toAccountId: string, amount: number, description?: string) => Promise<void>; // ✅ Ora è async con string IDs
+  onTransfer: (fromAccountId: string, toAccountId: string, amount: number, description?: string) => Promise<void>; // Ora è async con string IDs
 }
 
 const TransferModal: React.FC<TransferModalProps> = ({ 
@@ -34,13 +35,17 @@ const TransferModal: React.FC<TransferModalProps> = ({
 }) => {
   const { isDarkMode } = useTheme();
   
-  // ✅ Stati aggiornati con string IDs
+  // Stati aggiornati con string IDs
   const [fromAccountId, setFromAccountId] = useState<string>(accounts[0]?.id || "");
   const [toAccountId, setToAccountId] = useState<string>(accounts[1]?.id || "");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Stati per validazioni migliorate
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [showAdvancedInfo, setShowAdvancedInfo] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -49,7 +54,7 @@ const TransferModal: React.FC<TransferModalProps> = ({
     };
   }, []);
 
-  // ✅ Auto-select secondo account quando cambia il primo
+  // Auto-select secondo account quando cambia il primo
   useEffect(() => {
     if (fromAccountId && toAccountId === fromAccountId) {
       const availableAccounts = accounts.filter(acc => acc.id !== fromAccountId);
@@ -58,6 +63,15 @@ const TransferModal: React.FC<TransferModalProps> = ({
       }
     }
   }, [fromAccountId, accounts]);
+
+  // Validazione in tempo reale con debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      validateTransferForm();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [fromAccountId, toAccountId, amount, description]);
 
   // Theme colors matching other modals
   const getThemeColors = () => {
@@ -104,49 +118,37 @@ const TransferModal: React.FC<TransferModalProps> = ({
 
   const theme = getThemeColors();
 
-  // ✅ Trova accounts aggiornato per string IDs
+  // Trova accounts aggiornato per string IDs
   const fromAccount = accounts.find(acc => acc.id === fromAccountId);
   const toAccount = accounts.find(acc => acc.id === toAccountId);
   const transferAmount = parseFloat(amount) || 0;
 
-  // ✅ Validazione form migliorata
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!fromAccountId) {
-      newErrors.fromAccount = "Seleziona il conto di origine";
+  // Validazione form migliorata usando le utilities
+  const validateTransferForm = useCallback(() => {
+    if (!fromAccountId || !toAccountId || !amount) {
+      setValidationErrors([]);
+      setValidationWarnings([]);
+      return false;
     }
 
-    if (!toAccountId) {
-      newErrors.toAccount = "Seleziona il conto di destinazione";
+    if (!fromAccount || !toAccount || isNaN(transferAmount)) {
+      setValidationErrors(['Dati trasferimento non validi']);
+      setValidationWarnings([]);
+      return false;
     }
 
-    if (fromAccountId === toAccountId) {
-      newErrors.sameAccount = "Non puoi trasferire denaro sullo stesso conto";
-    }
+    const validation = validateTransfer(fromAccount, toAccount, transferAmount);
+    setValidationErrors(validation.errors);
+    setValidationWarnings(validation.warnings);
 
-    if (!amount || transferAmount <= 0) {
-      newErrors.amount = "Inserisci un importo valido maggiore di zero";
-    }
+    return validation.isValid;
+  }, [fromAccountId, toAccountId, amount, fromAccount, toAccount, transferAmount]);
 
-    if (fromAccount && transferAmount > fromAccount.balance) {
-      newErrors.amount = "Fondi insufficienti nel conto di origine";
-    }
-
-    // ✅ Verifica compatibilità valute
-    if (fromAccount && toAccount && fromAccount.currency !== toAccount.currency) {
-      newErrors.currency = `Non puoi trasferire tra valute diverse (${fromAccount.currency} → ${toAccount.currency})`;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // ✅ Submit handler asincrono
+  // Submit handler asincrono
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateTransferForm()) return;
     
     setIsSubmitting(true);
     
@@ -155,44 +157,62 @@ const TransferModal: React.FC<TransferModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Errore nel trasferimento:', error);
-      // Il toast error viene gestito nel componente parent
+      setValidationErrors(['Errore durante il trasferimento. Riprova.']);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ✅ Format currency con supporto multi-valuta
-  const formatCurrency = (amount: number, currency: string = 'EUR') => {
-    const currencySymbols: Record<string, string> = {
-      'EUR': '€',
-      'USD': '$',
-      'GBP': '£'
-    };
+  const hasErrors = validationErrors.length > 0;
+  const hasWarnings = validationWarnings.length > 0;
 
-    const locale = currency === 'EUR' ? 'it-IT' : 'en-US';
-    
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
+  // Componente per messaggi inline
+  const ValidationMessages = () => {
+    if (!hasErrors && !hasWarnings) return null;
+
+    return (
+      <div className="space-y-2 mb-6">
+        {validationErrors.map((error, index) => (
+          <div key={`error-${index}`} className={`
+            flex items-start gap-3 p-3 rounded-lg border text-sm
+            ${isDarkMode 
+              ? 'bg-red-900/20 border-red-800/30 text-red-200' 
+              : 'bg-red-50 border-red-200 text-red-800'
+            }
+            transition-all duration-200
+          `}>
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+            <p className="leading-tight">{error}</p>
+          </div>
+        ))}
+        {validationWarnings.map((warning, index) => (
+          <div key={`warning-${index}`} className={`
+            flex items-start gap-3 p-3 rounded-lg border text-sm
+            ${isDarkMode 
+              ? 'bg-yellow-900/20 border-yellow-800/30 text-yellow-200' 
+              : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+            }
+            transition-all duration-200
+          `}>
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-yellow-500" />
+            <p className="leading-tight">{warning}</p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
-  // ✅ Icona dinamica per account
-  const getAccountIcon = (account: Account) => {
-    return Wallet; // Puoi espandere questa logica basandoti sul tipo
-  };
-
-  // ✅ Verifica che ci siano almeno 2 conti
+  // Controllo se non ci sono conti disponibili
   if (accounts.length < 2) {
     return (
       <div className={`fixed inset-0 ${theme.background.backdrop} backdrop-blur-sm flex items-center justify-center z-50 p-4`}>
-        <div className={`${theme.background.modal} ${theme.border.main} border rounded-2xl w-full max-w-md p-6 shadow-2xl`}>
+        <div className={`${theme.background.modal} ${theme.border.main} border rounded-2xl p-6 max-w-md w-full shadow-2xl`}>
           <div className="text-center">
-            <AlertCircle className={`w-12 h-12 text-yellow-400 mx-auto mb-4`} />
-            <h3 className={`${theme.text.primary} font-semibold mb-2`}>
-              Conti Insufficienti
+            <Wallet className={`w-16 h-16 ${theme.text.muted} mx-auto mb-4`} />
+            <h3 className={`${theme.text.primary} text-xl font-bold mb-2`}>
+              Conti insufficienti
             </h3>
-            <p className={`${theme.text.muted} text-sm mb-4`}>
+            <p className={`${theme.text.muted} mb-6`}>
               Hai bisogno di almeno 2 conti per effettuare un trasferimento.
             </p>
             <button
@@ -222,7 +242,7 @@ const TransferModal: React.FC<TransferModalProps> = ({
                 Trasferisci Fondi
               </h2>
               <p className={`${theme.text.muted} text-sm`}>
-                Sposta denaro tra i tuoi conti
+                Sposta denaro tra i tuoi conti con controlli di sicurezza
               </p>
             </div>
           </div>
@@ -237,6 +257,10 @@ const TransferModal: React.FC<TransferModalProps> = ({
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
           <div className="p-4 md:p-6 overflow-y-auto flex-1">
+            
+            {/* Messaggi di validazione */}
+            <ValidationMessages />
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
               
               {/* Left Column */}
@@ -252,48 +276,17 @@ const TransferModal: React.FC<TransferModalProps> = ({
                     <select
                       value={fromAccountId}
                       onChange={(e) => setFromAccountId(e.target.value)}
-                      className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all text-sm md:text-base ${
-                        errors.fromAccount ? 'border-red-400' : ''
-                      }`}
+                      className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all text-sm md:text-base`}
                       disabled={isSubmitting}
                       required
                     >
-                      <option value="">Seleziona conto di origine</option>
-                      {accounts.map((account) => (
+                      <option value="">Seleziona origine</option>
+                      {accounts.filter(acc => acc.id !== toAccountId).map((account) => (
                         <option key={account.id} value={account.id}>
                           {account.name} - {formatCurrency(account.balance, account.currency)}
                         </option>
                       ))}
                     </select>
-                    {errors.fromAccount && (
-                      <p className="text-red-400 text-xs md:text-sm">{errors.fromAccount}</p>
-                    )}
-                    {fromAccount && (
-                      <div className={`p-3 ${theme.background.card} rounded-lg ${theme.border.card} border`}>
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="p-2 rounded-lg"
-                            style={{ 
-                              backgroundColor: `${fromAccount.color || '#10B981'}15`,
-                              border: `1px solid ${fromAccount.color || '#10B981'}40`
-                            }}
-                          >
-                            <Wallet 
-                              className="w-4 h-4 md:w-5 md:h-5" 
-                              style={{ color: fromAccount.color || '#10B981' }} 
-                            />
-                          </div>
-                          <div>
-                            <p className={`${theme.text.primary} font-medium text-sm md:text-base`}>
-                              {fromAccount.name}
-                            </p>
-                            <p className={`${theme.text.muted} text-xs md:text-sm`}>
-                              Disponibile: {formatCurrency(fromAccount.balance, fromAccount.currency)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* A */}
@@ -304,60 +297,19 @@ const TransferModal: React.FC<TransferModalProps> = ({
                     <select
                       value={toAccountId}
                       onChange={(e) => setToAccountId(e.target.value)}
-                      className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
-                        errors.toAccount ? 'border-red-400' : ''
-                      }`}
+                      className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all text-sm md:text-base`}
                       disabled={isSubmitting}
                       required
                     >
-                      <option value="">Seleziona conto di destinazione</option>
+                      <option value="">Seleziona destinazione</option>
                       {accounts.filter(acc => acc.id !== fromAccountId).map((account) => (
                         <option key={account.id} value={account.id}>
-                          {account.name} - {formatCurrency(account.balance, account.currency)}
+                          {account.name} - {account.currency}
                         </option>
                       ))}
                     </select>
-                    {errors.toAccount && (
-                      <p className="text-red-400 text-xs md:text-sm">{errors.toAccount}</p>
-                    )}
-                    {toAccount && (
-                      <div className={`p-3 ${theme.background.card} rounded-lg ${theme.border.card} border`}>
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="p-2 rounded-lg"
-                            style={{ 
-                              backgroundColor: `${toAccount.color || '#3B82F6'}15`,
-                              border: `1px solid ${toAccount.color || '#3B82F6'}40`
-                            }}
-                          >
-                            <Wallet 
-                              className="w-4 h-4 md:w-5 md:h-5" 
-                              style={{ color: toAccount.color || '#3B82F6' }} 
-                            />
-                          </div>
-                          <div>
-                            <p className={`${theme.text.primary} font-medium text-sm md:text-base`}>
-                              {toAccount.name}
-                            </p>
-                            <p className={`${theme.text.muted} text-xs md:text-sm`}>
-                              Saldo: {formatCurrency(toAccount.balance, toAccount.currency)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
-
-                {/* Errori generali */}
-                {(errors.sameAccount || errors.currency) && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-                    <p className="text-red-400 text-xs md:text-sm flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.sameAccount || errors.currency}
-                    </p>
-                  </div>
-                )}
 
                 {/* Importo */}
                 <div className="flex flex-col gap-2 md:gap-3">
@@ -370,23 +322,46 @@ const TransferModal: React.FC<TransferModalProps> = ({
                       </span>
                     )}
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all text-sm md:text-base ${
-                      errors.amount ? 'border-red-400' : ''
-                    }`}
-                    disabled={isSubmitting}
-                    required
-                  />
-                  {errors.amount && (
-                    <p className="text-red-400 text-xs md:text-sm flex items-center gap-2">
-                      <AlertCircle className="w-3 h-3 md:w-4 md:h-4" />
-                      {errors.amount}
-                    </p>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      className={`w-full p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all text-sm md:text-base ${
+                        hasErrors ? 'border-red-400' : ''
+                      }`}
+                      disabled={isSubmitting}
+                      required
+                    />
+                    {fromAccount && (
+                      <div className={`absolute right-3 top-3 md:top-4 text-sm ${theme.text.muted}`}>
+                        {fromAccount.currency}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Bottoni importo rapido */}
+                  {fromAccount && fromAccount.balance > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {[
+                        { label: "25%", value: fromAccount.balance * 0.25 },
+                        { label: "50%", value: fromAccount.balance * 0.5 },
+                        { label: "75%", value: fromAccount.balance * 0.75 },
+                        { label: "Max", value: fromAccount.balance }
+                      ].map(({ label, value }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => setAmount(value.toFixed(2))}
+                          disabled={isSubmitting || value <= 0}
+                          className={`px-3 py-1 text-xs rounded-lg ${theme.background.card} ${theme.border.input} border ${theme.text.muted} hover:bg-green-500/10 hover:border-green-400/50 hover:text-green-300 transition-all disabled:opacity-50`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -405,49 +380,134 @@ const TransferModal: React.FC<TransferModalProps> = ({
                     maxLength={200}
                   />
                 </div>
+
+                {/* Info Limiti */}
+                <div className={`p-4 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedInfo(!showAdvancedInfo)}
+                    className={`flex items-center gap-2 ${theme.text.primary} font-semibold text-sm w-full`}
+                  >
+                    <Shield className="w-4 h-4" />
+                    Limiti di Sicurezza
+                    <div className={`ml-auto transition-transform ${showAdvancedInfo ? 'rotate-180' : ''}`}>
+                      ▼
+                    </div>
+                  </button>
+                  
+                  {showAdvancedInfo && (
+                    <div className={`mt-3 pt-3 border-t ${theme.border.card} space-y-2`}>
+                      <div className="flex justify-between text-xs">
+                        <span className={theme.text.muted}>Limite giornaliero:</span>
+                        <span className={theme.text.secondary}>{formatCurrency(TRANSFER_LIMITS.daily)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className={theme.text.muted}>Limite singolo trasferimento:</span>
+                        <span className={theme.text.secondary}>{formatCurrency(TRANSFER_LIMITS.single)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className={theme.text.muted}>Importo minimo:</span>
+                        <span className={theme.text.secondary}>{formatCurrency(TRANSFER_LIMITS.minimum)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right Column - Riepilogo */}
               <div className="space-y-4 md:space-y-6">
-                {transferAmount > 0 && fromAccount && toAccount && Object.keys(errors).length === 0 ? (
-                  <div className={`p-4 md:p-6 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
-                    <h3 className={`${theme.text.primary} font-semibold mb-3 md:mb-4 text-sm md:text-base flex items-center gap-2`}>
+                
+                {/* Stato Validazione */}
+                <div className={`p-4 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    {hasErrors ? (
+                      <AlertTriangle className="w-5 h-5 text-red-400" />
+                    ) : hasWarnings ? (
+                      <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    )}
+                    <h4 className={`font-semibold text-sm ${
+                      hasErrors ? 'text-red-400' : 
+                      hasWarnings ? 'text-yellow-400' : 
+                      'text-green-400'
+                    }`}>
+                      {hasErrors ? 'Controlli di sicurezza' : 
+                       hasWarnings ? 'Avvertimenti attivi' : 
+                       'Trasferimento verificato'}
+                    </h4>
+                  </div>
+                  <div className={`text-xs ${theme.text.muted} space-y-1`}>
+                    <p>• Saldi sufficienti: {hasErrors && validationErrors.some(e => e.toLowerCase().includes('saldo') || e.toLowerCase().includes('insufficien')) ? '❌' : '✅'}</p>
+                    <p>• Limiti rispettati: {hasErrors && validationErrors.some(e => e.toLowerCase().includes('limite') || e.toLowerCase().includes('massimo')) ? '❌' : '✅'}</p>
+                    <p>• Valute compatibili: {hasErrors && validationErrors.some(e => e.toLowerCase().includes('valute')) ? '❌' : '✅'}</p>
+                    <p>• Conti diversi: {hasErrors && validationErrors.some(e => e.toLowerCase().includes('stesso')) ? '❌' : '✅'}</p>
+                  </div>
+                </div>
+
+                {/* Preview Trasferimento */}
+                {transferAmount > 0 && fromAccount && toAccount && !hasErrors ? (
+                  <div className={`p-4 md:p-6 ${theme.background.card} rounded-xl ${theme.border.card} border`}>
+                    <h3 className={`${theme.text.primary} font-semibold mb-4 text-sm md:text-base flex items-center gap-2`}>
                       <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                       Riepilogo Trasferimento
                     </h3>
-                    <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
-                      <div className="flex justify-between">
-                        <span className={`${theme.text.secondary}`}>Da:</span>
-                        <span className={`${theme.text.primary} font-medium`}>{fromAccount.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className={`${theme.text.secondary}`}>A:</span>
-                        <span className={`${theme.text.primary} font-medium`}>{toAccount.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className={`${theme.text.secondary}`}>Importo:</span>
-                        <span className={`${theme.text.primary} font-bold`}>
-                          {formatCurrency(transferAmount, fromAccount.currency)}
-                        </span>
-                      </div>
-                      {description && (
-                        <div className="flex justify-between">
-                          <span className={`${theme.text.secondary}`}>Descrizione:</span>
-                          <span className={`${theme.text.primary} font-medium truncate ml-2`}>{description}</span>
+                    
+                    <div className="space-y-4">
+                      {/* Da */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: fromAccount.color || '#6366F1' }}
+                          />
+                          <div>
+                            <p className={`${theme.text.primary} font-medium text-sm`}>
+                              {fromAccount.name}
+                            </p>
+                            <p className={`${theme.text.muted} text-xs`}>
+                              Saldo: {formatCurrency(fromAccount.balance, fromAccount.currency)}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      <div className={`border-t ${theme.border.card} pt-2 md:pt-3 mt-2 md:mt-3`}>
-                        <div className="flex justify-between">
-                          <span className={`${theme.text.secondary}`}>Nuovo saldo {fromAccount.name}:</span>
-                          <span className={`${theme.text.primary}`}>
-                            {formatCurrency(fromAccount.balance - transferAmount, fromAccount.currency)}
-                          </span>
+                        <div className="text-right">
+                          <p className="text-red-400 font-semibold text-sm">
+                            -{formatCurrency(transferAmount, fromAccount.currency)}
+                          </p>
+                          <p className={`${theme.text.muted} text-xs`}>
+                            Nuovo: {formatCurrency(fromAccount.balance - transferAmount, fromAccount.currency)}
+                          </p>
                         </div>
-                        <div className="flex justify-between">
-                          <span className={`${theme.text.secondary}`}>Nuovo saldo {toAccount.name}:</span>
-                          <span className={`${theme.text.primary}`}>
-                            {formatCurrency(toAccount.balance + transferAmount, toAccount.currency)}
-                          </span>
+                      </div>
+
+                      {/* Freccia */}
+                      <div className="flex justify-center">
+                        <TrendingDown className={`w-5 h-5 ${theme.text.muted} transform rotate-90`} />
+                      </div>
+
+                      {/* A */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: toAccount.color || '#10B981' }}
+                          />
+                          <div>
+                            <p className={`${theme.text.primary} font-medium text-sm`}>
+                              {toAccount.name}
+                            </p>
+                            <p className={`${theme.text.muted} text-xs`}>
+                              Saldo: {formatCurrency(toAccount.balance, toAccount.currency)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-green-400 font-semibold text-sm">
+                            +{formatCurrency(transferAmount, toAccount.currency)}
+                          </p>
+                          <p className={`${theme.text.muted} text-xs`}>
+                            Nuovo: {formatCurrency(toAccount.balance + transferAmount, toAccount.currency)}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -457,18 +517,18 @@ const TransferModal: React.FC<TransferModalProps> = ({
                     <div className="text-center">
                       <ArrowLeftRight className={`w-12 h-12 md:w-16 md:h-16 ${theme.text.muted} mx-auto mb-3 md:mb-4`} />
                       <h3 className={`${theme.text.primary} font-semibold mb-2 text-sm md:text-base`}>
-                        Inserisci i dettagli
+                        Configura Trasferimento
                       </h3>
                       <p className={`${theme.text.muted} text-xs md:text-sm`}>
-                        Compila i campi per vedere il riepilogo del trasferimento
+                        Seleziona conti e importo per vedere l'anteprima
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* Info */}
-                <div className={`p-3 md:p-4 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
-                  <h4 className={`${theme.text.primary} font-semibold mb-2 text-sm md:text-base`}>
+                {/* Info Note */}
+                <div className={`p-4 md:p-6 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
+                  <h4 className={`${theme.text.primary} font-semibold mb-2 md:mb-3 text-sm md:text-base`}>
                     💡 Note sul trasferimento:
                   </h4>
                   <ul className={`${theme.text.muted} text-xs md:text-sm space-y-1`}>
@@ -476,6 +536,7 @@ const TransferModal: React.FC<TransferModalProps> = ({
                     <li>• Non ci sono commissioni per trasferimenti interni</li>
                     <li>• I conti devono avere la stessa valuta</li>
                     <li>• L'operazione verrà registrata nella cronologia</li>
+                    <li>• Controlli automatici di sicurezza attivi</li>
                   </ul>
                 </div>
               </div>
@@ -496,7 +557,7 @@ const TransferModal: React.FC<TransferModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!transferAmount || !fromAccount || !toAccount || Object.keys(errors).length > 0 || isSubmitting}
+                disabled={!transferAmount || !fromAccount || !toAccount || hasErrors || isSubmitting}
                 className="px-4 py-2 md:px-6 md:py-3 rounded-xl bg-gradient-to-r from-green-500 to-blue-600 text-white font-semibold hover:from-green-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
               >
                 {isSubmitting ? (
@@ -507,7 +568,7 @@ const TransferModal: React.FC<TransferModalProps> = ({
                 ) : (
                   <>
                     <ArrowLeftRight className="w-4 h-4 md:w-5 md:h-5" />
-                    Trasferisci Fondi
+                    Trasferisci {amount && formatCurrency(parseFloat(amount))}
                   </>
                 )}
               </button>

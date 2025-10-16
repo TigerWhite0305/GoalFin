@@ -1,7 +1,8 @@
-// src/components/modals/AccountModal.tsx - CON COLOR PICKER AVANZATO
-import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2, Palette } from "lucide-react";
+// src/components/ui/AccountModal.tsx - CON VALIDAZIONI MIGLIORATE (SENZA ValidationMessage)
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2, Palette, AlertTriangle, AlertCircle } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { validateCompleteAccount, ACCOUNT_MIN_BALANCES, formatCurrency } from "../../utils/validations.";
 
 // Tipo Account compatibile con backend
 export type Account = {
@@ -25,13 +26,15 @@ interface AccountModalProps {
   isNew: boolean;
   onClose: () => void;
   onSave: (account: any) => Promise<void>;
+  existingAccounts?: Account[]; // Aggiunto per controllo duplicati
 }
 
 const AccountModal: React.FC<AccountModalProps> = ({ 
   account, 
   isNew, 
   onClose, 
-  onSave 
+  onSave,
+  existingAccounts = []
 }) => {
   const { isDarkMode } = useTheme();
   
@@ -43,9 +46,10 @@ const AccountModal: React.FC<AccountModalProps> = ({
   const [color, setColor] = useState(account?.color ?? "");
   const [icon, setIcon] = useState(account?.icon ?? "");
   
-  // Stati UI
+  // Stati UI con validazioni migliorate
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [customColor, setCustomColor] = useState(account?.color ?? "#6366F1");
 
   // Palette colori predefiniti (8 colori)
@@ -105,10 +109,34 @@ const AccountModal: React.FC<AccountModalProps> = ({
   const theme = getThemeColors();
 
   const accountTypes = [
-    { value: "checking", label: "Conto Corrente", icon: Landmark, color: "#6366F1" },
-    { value: "savings", label: "Conto Risparmio", icon: PiggyBank, color: "#10B981" },
-    { value: "card", label: "Carta/Prepagata", icon: CreditCard, color: "#F59E0B" },
-    { value: "investment", label: "Investimenti", icon: Building, color: "#8B5CF6" },
+    { 
+      value: "checking", 
+      label: "Conto Corrente", 
+      icon: Landmark, 
+      color: "#6366F1",
+      minBalance: ACCOUNT_MIN_BALANCES.checking
+    },
+    { 
+      value: "savings", 
+      label: "Conto Risparmio", 
+      icon: PiggyBank, 
+      color: "#10B981",
+      minBalance: ACCOUNT_MIN_BALANCES.savings
+    },
+    { 
+      value: "card", 
+      label: "Carta/Prepagata", 
+      icon: CreditCard, 
+      color: "#F59E0B",
+      minBalance: ACCOUNT_MIN_BALANCES.card
+    },
+    { 
+      value: "investment", 
+      label: "Investimenti", 
+      icon: Building, 
+      color: "#8B5CF6",
+      minBalance: ACCOUNT_MIN_BALANCES.investment
+    },
   ];
 
   const currencies = [
@@ -126,67 +154,44 @@ const AccountModal: React.FC<AccountModalProps> = ({
 
   // Auto-set default color when type changes
   useEffect(() => {
-    if (!color || !account) { // Solo se non c'è un colore già selezionato o stiamo creando
+    if (!color || !account) {
       const defaultColor = accountTypes.find(t => t.value === type)?.color || "#6366F1";
       setColor(defaultColor);
       setCustomColor(defaultColor);
     }
   }, [type]);
 
-  // Validazione contrasto colore (semplificata)
-  const isColorTooLight = (hexColor: string): boolean => {
-    const r = parseInt(hexColor.slice(1, 3), 16);
-    const g = parseInt(hexColor.slice(3, 5), 16);
-    const b = parseInt(hexColor.slice(5, 7), 16);
-    
-    // Formula luminanza relativa semplificata
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.8; // Troppo chiaro se > 80%
-  };
+  // Validazione in tempo reale con debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      validateForm();
+    }, 300);
 
-  // Validazione form
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+    return () => clearTimeout(timeoutId);
+  }, [name, type, balance, currency, color]);
 
-    if (!name.trim()) {
-      newErrors.name = "Il nome del conto è obbligatorio";
-    } else if (name.trim().length < 2) {
-      newErrors.name = "Il nome deve essere almeno 2 caratteri";
-    }
+  // Validazione form usando le utilities migliorate
+  const validateForm = useCallback(() => {
+    const validation = validateCompleteAccount(
+      name,
+      type,
+      balance,
+      currency,
+      color,
+      existingAccounts,
+      account?.id
+    );
 
-    if (!type) {
-      newErrors.type = "Seleziona un tipo di conto";
-    }
+    setValidationErrors(validation.errors);
+    setValidationWarnings(validation.warnings);
 
-    if (balance && isNaN(parseFloat(balance))) {
-      newErrors.balance = "Inserisci un importo valido";
-    }
-
-    if (balance && parseFloat(balance) < 0) {
-      newErrors.balance = "Il saldo non può essere negativo";
-    }
-
-    if (color && isColorTooLight(color)) {
-      newErrors.color = "Colore troppo chiaro, scegli un colore più scuro per una migliore visibilità";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    return validation.isValid;
+  }, [name, type, balance, currency, color, existingAccounts, account?.id]);
 
   // Handle color selection
   const handleColorSelection = (selectedColor: string) => {
     setColor(selectedColor);
     setCustomColor(selectedColor);
-    
-    // Rimuovi errore colore se presente
-    if (errors.color) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.color;
-        return newErrors;
-      });
-    }
   };
 
   // Handle custom color picker
@@ -218,6 +223,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Errore nel salvataggio:', error);
+      setValidationErrors(['Errore durante il salvataggio. Riprova.']);
     } finally {
       setIsSubmitting(false);
     }
@@ -225,6 +231,44 @@ const AccountModal: React.FC<AccountModalProps> = ({
 
   const selectedType = accountTypes.find(t => t.value === type);
   const isPredefinedColor = predefinedColors.includes(color);
+  const hasErrors = validationErrors.length > 0;
+  const hasWarnings = validationWarnings.length > 0;
+
+  // Componente per messaggi inline
+  const ValidationMessages = () => {
+    if (!hasErrors && !hasWarnings) return null;
+
+    return (
+      <div className="space-y-2 mb-6">
+        {validationErrors.map((error, index) => (
+          <div key={`error-${index}`} className={`
+            flex items-start gap-3 p-3 rounded-lg border text-sm
+            ${isDarkMode 
+              ? 'bg-red-900/20 border-red-800/30 text-red-200' 
+              : 'bg-red-50 border-red-200 text-red-800'
+            }
+            transition-all duration-200
+          `}>
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+            <p className="leading-tight">{error}</p>
+          </div>
+        ))}
+        {validationWarnings.map((warning, index) => (
+          <div key={`warning-${index}`} className={`
+            flex items-start gap-3 p-3 rounded-lg border text-sm
+            ${isDarkMode 
+              ? 'bg-yellow-900/20 border-yellow-800/30 text-yellow-200' 
+              : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+            }
+            transition-all duration-200
+          `}>
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-yellow-500" />
+            <p className="leading-tight">{warning}</p>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className={`fixed inset-0 ${theme.background.backdrop} backdrop-blur-sm flex items-center justify-center z-50 p-4`}>
@@ -256,12 +300,16 @@ const AccountModal: React.FC<AccountModalProps> = ({
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
           <div className="p-4 md:p-6 overflow-y-auto flex-1">
+            
+            {/* Messaggi di validazione */}
+            <ValidationMessages />
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
               
               {/* Left Column */}
               <div className="space-y-4 md:space-y-6">
                 
-                {/* Tipo Conto */}
+                {/* Tipo Conto con saldi minimi */}
                 <div className="flex flex-col gap-2 md:gap-3">
                   <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
                     Tipo di Conto *
@@ -278,21 +326,24 @@ const AccountModal: React.FC<AccountModalProps> = ({
                             if (!icon) setIcon(accountType.value);
                           }}
                           disabled={isSubmitting}
-                          className={`p-3 md:p-4 rounded-xl border-2 transition-all flex items-center gap-2 md:gap-3 text-sm md:text-base ${
+                          className={`p-3 md:p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-1 text-sm md:text-base relative ${
                             type === accountType.value
                               ? "border-blue-500/50 bg-blue-500/10 text-blue-300"
                               : `${theme.border.card} ${theme.background.card} ${theme.text.secondary} hover:border-gray-600 dark:hover:border-gray-600 light:hover:border-gray-400 hover:bg-gray-700/50 dark:hover:bg-gray-700/50 light:hover:bg-gray-200/50`
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           <IconComponent className="w-4 h-4 md:w-5 md:h-5" style={{ color: accountType.color }} />
-                          <span className="font-medium">{accountType.label}</span>
+                          <span className="font-medium text-center">{accountType.label}</span>
+                          <span className={`text-xs ${theme.text.muted}`}>
+                            Min: {formatCurrency(accountType.minBalance)}
+                          </span>
+                          {type === accountType.value && (
+                            <CheckCircle2 className="w-4 h-4 text-blue-400 absolute top-1 right-1" />
+                          )}
                         </button>
                       );
                     })}
                   </div>
-                  {errors.type && (
-                    <p className="text-red-400 text-xs md:text-sm">{errors.type}</p>
-                  )}
                 </div>
 
                 {/* Nome Conto */}
@@ -307,14 +358,11 @@ const AccountModal: React.FC<AccountModalProps> = ({
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Es. Conto Corrente Principale"
                     className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
-                      errors.name ? 'border-red-400' : ''
+                      hasErrors && validationErrors.some(e => e.toLowerCase().includes('nome')) ? 'border-red-400' : ''
                     }`}
                     disabled={isSubmitting}
                     required
                   />
-                  {errors.name && (
-                    <p className="text-red-400 text-xs md:text-sm">{errors.name}</p>
-                  )}
                 </div>
 
                 {/* Saldo e Valuta */}
@@ -323,20 +371,24 @@ const AccountModal: React.FC<AccountModalProps> = ({
                     <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
                       {isNew ? "Saldo Iniziale" : "Saldo Attuale"}
                     </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={balance}
-                      onChange={(e) => setBalance(e.target.value)}
-                      placeholder="0.00"
-                      className={`p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
-                        errors.balance ? 'border-red-400' : ''
-                      }`}
-                      disabled={isSubmitting}
-                    />
-                    {errors.balance && (
-                      <p className="text-red-400 text-xs md:text-sm">{errors.balance}</p>
-                    )}
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={balance}
+                        onChange={(e) => setBalance(e.target.value)}
+                        placeholder="0.00"
+                        className={`w-full p-3 md:p-4 rounded-xl ${theme.background.input} ${theme.border.input} border ${theme.text.primary} placeholder-gray-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm md:text-base ${
+                          hasErrors && validationErrors.some(e => e.toLowerCase().includes('saldo') || e.toLowerCase().includes('minimo')) ? 'border-red-400' : ''
+                        }`}
+                        disabled={isSubmitting}
+                      />
+                      {selectedType && (
+                        <div className={`absolute right-3 top-3 text-xs ${theme.text.muted}`}>
+                          Min: {formatCurrency(selectedType.minBalance)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col gap-2 md:gap-3">
                     <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
@@ -412,10 +464,6 @@ const AccountModal: React.FC<AccountModalProps> = ({
                     </div>
                   </div>
                   
-                  {errors.color && (
-                    <p className="text-red-400 text-xs md:text-sm">{errors.color}</p>
-                  )}
-                  
                   <p className={`${theme.text.muted} text-xs`}>
                     Clicca sui colori predefiniti o sull'icona palette per scegliere un colore personalizzato
                   </p>
@@ -424,6 +472,36 @@ const AccountModal: React.FC<AccountModalProps> = ({
 
               {/* Right Column - Preview */}
               <div className="space-y-4 md:space-y-6">
+                
+                {/* Stato Validazione */}
+                <div className={`p-4 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    {hasErrors ? (
+                      <AlertTriangle className="w-5 h-5 text-red-400" />
+                    ) : hasWarnings ? (
+                      <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    )}
+                    <h4 className={`font-semibold text-sm ${
+                      hasErrors ? 'text-red-400' : 
+                      hasWarnings ? 'text-yellow-400' : 
+                      'text-green-400'
+                    }`}>
+                      {hasErrors ? 'Errori da correggere' : 
+                       hasWarnings ? 'Avvisi da controllare' : 
+                       'Tutti i campi sono validi'}
+                    </h4>
+                  </div>
+                  <div className={`text-xs ${theme.text.muted} space-y-1`}>
+                    <p>• Controllo duplicati: {validationErrors.some(e => e.toLowerCase().includes('esiste già')) ? '❌' : '✅'}</p>
+                    <p>• Saldi minimi: {validationErrors.some(e => e.toLowerCase().includes('minimo')) ? '❌' : '✅'}</p>
+                    <p>• Validazione nome: {validationErrors.some(e => e.toLowerCase().includes('nome') || e.toLowerCase().includes('caratteri')) ? '❌' : '✅'}</p>
+                    <p>• Validazione colore: {validationWarnings.some(w => w.toLowerCase().includes('colore')) ? '⚠️' : '✅'}</p>
+                  </div>
+                </div>
+
+                {/* Preview */}
                 {name && selectedType ? (
                   <div className={`p-4 md:p-6 ${theme.background.card} rounded-xl ${theme.border.card} border`}>
                     <h3 className={`${theme.text.primary} font-semibold mb-3 md:mb-4 text-sm md:text-base flex items-center gap-2`}>
@@ -477,17 +555,16 @@ const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                 )}
 
-                {/* Info Card */}
+                {/* Info Card Migliorata */}
                 <div className={`p-4 md:p-6 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
                   <h4 className={`${theme.text.primary} font-semibold mb-2 md:mb-3 text-sm md:text-base`}>
-                    💡 Suggerimenti
+                    🔒 Validazioni Attive
                   </h4>
                   <ul className={`${theme.text.muted} text-xs md:text-sm space-y-2`}>
-                    <li>• Usa nomi descrittivi per identificare facilmente i tuoi conti</li>
-                    <li>• Il saldo può essere aggiornato in qualsiasi momento</li>
-                    <li>• Seleziona il tipo di conto più appropriato per una migliore organizzazione</li>
-                    <li>• I colori aiutano a distinguere visualmente i diversi conti</li>
-                    <li>• Evita colori troppo chiari per una migliore leggibilità</li>
+                    <li>• <strong>Anti-duplicati:</strong> Controllo nomi esistenti</li>
+                    <li>• <strong>Saldi minimi:</strong> {selectedType ? `Min ${formatCurrency(selectedType.minBalance)}` : 'Per tipo conto'}</li>
+                    <li>• <strong>Validazione real-time:</strong> Controlli automatici</li>
+                    <li>• <strong>Colori accessibili:</strong> Contrasto automatico</li>
                   </ul>
                 </div>
               </div>
@@ -508,7 +585,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!name || !type || isSubmitting || Object.keys(errors).length > 0}
+                disabled={!name || !type || isSubmitting || hasErrors}
                 className="px-4 py-2 md:px-6 md:py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
               >
                 {isSubmitting ? (
