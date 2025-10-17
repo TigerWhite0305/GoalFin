@@ -1,7 +1,7 @@
 // src/components/ui/PortfolioErrorStates.tsx - NUOVO FILE
 import React from 'react';
 import { AlertTriangle, RefreshCw, Wifi, WifiOff, Database, Shield, TrendingDown, X, AlertCircle } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../../context/ThemeContext';
 
 export type ErrorType = 'network' | 'server' | 'validation' | 'security' | 'balance' | 'sync' | 'general';
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';

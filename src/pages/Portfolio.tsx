@@ -9,12 +9,12 @@ import {
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
-import AccountModal from "../components/ui/AccountModal";
-import TransferModal from "../components/ui/TransferModal";
-import BalanceAdjustModal from "../components/ui/BalanceAdjustModal";
-import SwipeableAccountCard from "../components/ui/SwipeableAccountCard";
-import BulkOperationsBar from "../components/ui/BulkOperationsBar";
-import BulkConfirmationModal from "../components/ui/BulkConfirmationModal";
+import AccountModal from "../components/ui/portfolio/AccountModal";
+import TransferModal from "../components/ui/portfolio/TransferModal";
+import BalanceAdjustModal from "../components/ui/portfolio/BalanceAdjustModal";
+import SwipeableAccountCard from "../components/ui/portfolio/SwipeableAccountCard";
+import BulkOperationsBar from "../components/ui/portfolio/BulkOperationsBar";
+import BulkConfirmationModal from "../components/ui/portfolio/BulkConfirmationModal";
 import {
   getAccountsApi,
   createAccountApi,

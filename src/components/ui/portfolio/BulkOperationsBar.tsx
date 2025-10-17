@@ -1,7 +1,7 @@
 // src/components/ui/BulkOperationsBar.tsx - Toolbar per operazioni multiple (FIXED)
 import React, { useState } from 'react';
 import { Trash2, Palette, Download, CheckSquare, Square, X } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../../context/ThemeContext';
 
 interface BulkOperationsBarProps {
   selectedAccountIds: string[];

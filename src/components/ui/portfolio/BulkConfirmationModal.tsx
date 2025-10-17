@@ -1,7 +1,7 @@
 // src/components/ui/BulkConfirmationModal.tsx - Modal di conferma per operazioni multiple (FIXED)
 import React, { useState } from 'react';
 import { X, AlertTriangle, Trash2, Palette, Download, Loader } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../../context/ThemeContext';
 
 interface BulkConfirmationModalProps {
   isOpen: boolean;

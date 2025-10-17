@@ -1,7 +1,7 @@
 // src/components/modals/BalanceAdjustModal.tsx - AGGIORNATO PER BACKEND REALE
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, DollarSign, ArrowUpRight, ArrowDownRight, Loader2, Wallet } from "lucide-react";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../../context/ThemeContext";
 
 // ✅ TIPO AGGIORNATO per essere compatibile con il backend
 export type Account = {

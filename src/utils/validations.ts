@@ -1,5 +1,5 @@
 // src/utils/validations.ts - NUOVO FILE
-import { Account } from "../components/ui/AccountModal";
+import { Account } from "../components/ui/portfolio/AccountModal";
 
 // Configurazione saldi minimi per tipo conto
 export const ACCOUNT_MIN_BALANCES = {

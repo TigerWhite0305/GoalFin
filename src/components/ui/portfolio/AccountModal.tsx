@@ -1,8 +1,8 @@
 // src/components/ui/AccountModal.tsx - CON FIX VALIDAZIONE INIZIALE
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2, Palette, AlertTriangle, AlertCircle } from "lucide-react";
-import { useTheme } from "../../context/ThemeContext";
-import { validateCompleteAccount, ACCOUNT_MIN_BALANCES, formatCurrency } from "../../utils/validations";
+import { useTheme } from "../../../context/ThemeContext";
+import { validateCompleteAccount, ACCOUNT_MIN_BALANCES, formatCurrency } from "../../../utils/validations";
 
 // Tipo Account compatibile con backend
 export type Account = {
