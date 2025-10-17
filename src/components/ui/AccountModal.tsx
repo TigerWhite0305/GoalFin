@@ -1,4 +1,4 @@
-// src/components/ui/AccountModal.tsx - CON VALIDAZIONI MIGLIORATE E FIX INIZIALE
+// src/components/ui/AccountModal.tsx - CON FIX VALIDAZIONE INIZIALE
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, CheckCircle2, Plus, Edit, Wallet, CreditCard, PiggyBank, Building, Landmark, Loader2, Palette, AlertTriangle, AlertCircle } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
@@ -26,7 +26,7 @@ interface AccountModalProps {
   isNew: boolean;
   onClose: () => void;
   onSave: (account: any) => Promise<void>;
-  existingAccounts?: Account[]; // Aggiunto per controllo duplicati
+  existingAccounts?: Account[];
 }
 
 const AccountModal: React.FC<AccountModalProps> = ({ 
@@ -52,20 +52,14 @@ const AccountModal: React.FC<AccountModalProps> = ({
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [customColor, setCustomColor] = useState(account?.color ?? "#6366F1");
   
-  // FIX: Stati per gestire validazione iniziale
+  // FIX: Stati per evitare validazione al primo caricamento
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
   // Palette colori predefiniti (8 colori)
   const predefinedColors = [
-    "#6366F1", // Indigo
-    "#10B981", // Emerald
-    "#F59E0B", // Amber
-    "#8B5CF6", // Violet
-    "#EF4444", // Red
-    "#06B6D4", // Cyan
-    "#84CC16", // Lime
-    "#F97316", // Orange
+    "#6366F1", "#10B981", "#F59E0B", "#8B5CF6",
+    "#EF4444", "#06B6D4", "#84CC16", "#F97316",
   ];
 
   const getThemeColors = () => {
@@ -165,23 +159,32 @@ const AccountModal: React.FC<AccountModalProps> = ({
     }
   }, [type]);
 
-  // FIX: Validazione in tempo reale con debounce - AGGIORNATA
+  // FIX: Validazione in tempo reale SOLO dopo che l'utente ha interagito
   useEffect(() => {
-    // Dopo il primo render, disabilita l'initialLoad
+    // Dopo 100ms dal primo caricamento, disabilita initialLoad
     if (initialLoad) {
       const timer = setTimeout(() => setInitialLoad(false), 100);
       return () => clearTimeout(timer);
     }
 
-    const timeoutId = setTimeout(() => {
-      validateForm();
-    }, 300);
+    // Validazione solo se l'utente ha interagito O se non è il caricamento iniziale
+    if (hasUserInteracted || !initialLoad) {
+      const timeoutId = setTimeout(() => {
+        validateForm();
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [name, type, balance, currency, color, hasUserInteracted, initialLoad]);
 
-    return () => clearTimeout(timeoutId);
-  }, [name, type, balance, currency, color, initialLoad]);
-
-  // FIX: Validazione form usando le utilities migliorate - AGGIORNATA
+  // FIX: Validazione form con controllo caricamento iniziale
   const validateForm = useCallback(() => {
+    // Se è il caricamento iniziale e l'utente non ha interagito, non validare
+    if (initialLoad && !hasUserInteracted) {
+      setValidationErrors([]);
+      setValidationWarnings([]);
+      return true;
+    }
+
     const validation = validateCompleteAccount(
       name,
       type,
@@ -189,8 +192,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
       currency,
       color,
       existingAccounts,
-      account?.id,
-      initialLoad && !hasUserInteracted // Passa il flag per il caricamento iniziale
+      account?.id
     );
 
     setValidationErrors(validation.errors);
@@ -199,21 +201,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
     return validation.isValid;
   }, [name, type, balance, currency, color, existingAccounts, account?.id, initialLoad, hasUserInteracted]);
 
-  // Handle color selection
-  const handleColorSelection = (selectedColor: string) => {
-    setColor(selectedColor);
-    setCustomColor(selectedColor);
-    setHasUserInteracted(true);
-  };
-
-  // Handle custom color picker
-  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newColor = e.target.value;
-    setCustomColor(newColor);
-    handleColorSelection(newColor);
-  };
-
-  // FIX: Handler per input che marca l'interazione dell'utente
+  // FIX: Handler che marcano l'interazione utente
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
     setHasUserInteracted(true);
@@ -235,7 +223,18 @@ const AccountModal: React.FC<AccountModalProps> = ({
     setHasUserInteracted(true);
   };
 
-  // Submit handler asincrono
+  const handleColorSelection = (selectedColor: string) => {
+    setColor(selectedColor);
+    setCustomColor(selectedColor);
+    setHasUserInteracted(true);
+  };
+
+  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setCustomColor(newColor);
+    handleColorSelection(newColor);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -440,13 +439,12 @@ const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                 </div>
 
-                {/* Color Picker Avanzato */}
+                {/* Color Picker */}
                 <div className="flex flex-col gap-2 md:gap-3">
                   <label className={`${theme.text.primary} font-semibold text-sm md:text-base`}>
                     Colore del Conto
                   </label>
                   
-                  {/* Griglia 3x3 (8 predefiniti + 1 custom) */}
                   <div className="grid grid-cols-3 gap-2 max-w-[120px]">
                     {predefinedColors.map((colorOption) => (
                       <button
@@ -586,7 +584,7 @@ const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                 )}
 
-                {/* Info Card Migliorata */}
+                {/* Info Card */}
                 <div className={`p-4 md:p-6 ${theme.background.card} ${theme.border.card} border rounded-xl`}>
                   <h4 className={`${theme.text.primary} font-semibold mb-2 md:mb-3 text-sm md:text-base`}>
                     🔒 Validazioni Attive

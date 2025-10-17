@@ -8,6 +8,7 @@ import { useToast } from "../context/ToastContext";
 import AccountModal from "../components/ui/AccountModal";
 import TransferModal from "../components/ui/TransferModal";
 import BalanceAdjustModal from "../components/ui/BalanceAdjustModal";
+import SwipeableAccountCard from "../components/ui/SwipeableAccountCard";
 import {
   getAccountsApi,
   createAccountApi,
@@ -573,109 +574,32 @@ const Portfolio: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Accounts Grid */}
+            {/* Accounts Grid - CON SWIPE GESTURES */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {accounts.map((account) => {
                 const IconComponent = renderAccountIcon(account);
                 const accountColor = account.color || getDefaultColorForType(account.type);
-                const isHighlighted = highlightedAccountId === account.id; // ✅ AGGIUNTO
+                const isHighlighted = highlightedAccountId === account.id;
                 
                 return (
-                  <div 
+                  <SwipeableAccountCard
                     key={account.id}
-                    id={`account-${account.id}`} // ✅ AGGIUNTO ID per scroll
-                    className={`${theme.background.card} ${theme.border.card} ${theme.background.cardHover} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden ${
-                      isHighlighted 
-                        ? 'ring-4 ring-blue-500/50 shadow-blue-500/25 shadow-2xl scale-105 z-10' // ✅ AGGIUNTO highlight styles
-                        : ''
-                    }`}
-                  >
-                    {/* ✅ AGGIUNTO - Overlay animato per highlight */}
-                    {isHighlighted && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 animate-pulse rounded-xl" />
-                    )}
-                    
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300"
-                         style={{ background: `linear-gradient(135deg, ${accountColor}20, transparent)` }} />
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-3">
-                        <div 
-                          className="p-2 rounded-xl border shadow-sm"
-                          style={{ 
-                            backgroundColor: `${accountColor}15`, 
-                            borderColor: `${accountColor}30`,
-                            boxShadow: `0 2px 8px ${accountColor}15`
-                          }}
-                        >
-                          <IconComponent className="w-5 h-5" style={{ color: accountColor }} />
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs ${theme.text.muted} ${theme.background.secondary} px-2 py-1 rounded-full font-medium`}>
-                            {getAccountTypeLabel(account.type)}
-                          </span>
-                          
-                          <div className="relative">
-                            <button
-                              onClick={() => setOpenMenuId(openMenuId === account.id ? null : account.id)}
-                              className={`p-1 ${theme.text.muted} hover:text-gray-50 transition-colors rounded hover:bg-gray-700/50`}
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                            
-                            {openMenuId === account.id && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
-                                <div className={`absolute top-6 right-0 z-50 w-44 ${theme.background.card} ${theme.border.card} border rounded-lg shadow-xl overflow-hidden`}>
-                                  <button
-                                    onClick={() => handleEditAccount(account)}
-                                    className={`w-full px-3 py-2 text-left text-indigo-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                    Modifica Conto
-                                  </button>
-                                  <button
-                                    onClick={() => handleAdjustBalance(account)}
-                                    className={`w-full px-3 py-2 text-left text-amber-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
-                                  >
-                                    <DollarSign className="w-3 h-3" />
-                                    Correggi Saldo
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteAccount(account.id)}
-                                    className={`w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                    Elimina Conto
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mb-3 space-y-1">
-                        <h3 className={`font-semibold text-base ${theme.text.primary} group-hover:text-indigo-400 transition-colors leading-tight`}>
-                          {account.name}
-                        </h3>
-                        {account.bank && <p className={`${theme.text.muted} text-sm`}>{account.bank}</p>}
-                      </div>
-                      
-                      <div className="mb-3">
-                        <div className="text-lg font-bold leading-tight" style={{ color: accountColor }}>
-                          {showBalance ? formatCurrency(account.balance) : "••••••"}
-                        </div>
-                      </div>
-                      
-                      {account.lastTransaction && (
-                        <div className={`text-xs ${theme.text.subtle}`}>
-                          Aggiornato: {formatDate(account.lastTransaction)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    account={account}
+                    IconComponent={IconComponent}
+                    accountColor={accountColor}
+                    isHighlighted={isHighlighted}
+                    showBalance={showBalance}
+                    theme={theme}
+                    openMenuId={openMenuId}
+                    setOpenMenuId={setOpenMenuId}
+                    onEdit={handleEditAccount}
+                    onDelete={handleDeleteAccount}
+                    onAdjustBalance={handleAdjustBalance}
+                    onTransfer={() => setIsTransferModalOpen(true)}
+                    formatCurrency={formatCurrency}
+                    formatDate={formatDate}
+                    getAccountTypeLabel={getAccountTypeLabel}
+                  />
                 );
               })}
             </div>
