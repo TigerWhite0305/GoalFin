@@ -11,6 +11,7 @@ import { useAccountOperations } from "../components/ui/portfolio/hooks/useAccoun
 // Components
 import PortfolioHeader from "../components/ui/portfolio/components/PortfolioHeader";
 import TotalBalanceCard from "../components/ui/portfolio/components/TotalBalanceCard";
+import AnalyticsOverview from "../components/ui/portfolio/components/AnalyticsOverview";
 import EmptyPortfolioState from "../components/ui/portfolio/components/EmptyPortfolioState";
 import AccountsGrid from "../components/ui/portfolio/components/AccountsGrid";
 import DistributionChart from "../components/ui/portfolio/components/DistributionChart";
@@ -178,6 +179,11 @@ const Portfolio: React.FC = () => {
           onAddAccount={handleAddAccount}
           canTransfer={accounts.length >= 2}
         />
+
+        {/* Analytics Overview - Solo se ci sono conti e user è loggato */}
+        {accounts.length > 0 && localStorage.getItem('token') && (
+          <AnalyticsOverview theme={theme} />
+        )}
 
         {/* Main Content */}
         {accounts.length === 0 ? (
