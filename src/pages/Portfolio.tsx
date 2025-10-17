@@ -1,622 +1,138 @@
-// src/pages/Portfolio.tsx - AGGIUNTO Bulk Operations al Portfolio esistente
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { 
-  Wallet, CreditCard, PiggyBank, TrendingUp, Eye, EyeOff, ArrowUpRight, 
-  ArrowDownRight, Plus, History, DollarSign, Building, Landmark, MoreVertical, 
-  Edit, Trash2, ArrowLeftRight, RefreshCw, CheckSquare, Square, Users
-} from "lucide-react";
+// src/pages/Portfolio.tsx - REFACTORED VERSION
+import React from "react";
+import { RefreshCw } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
-import { useToast } from "../context/ToastContext";
+
+// Custom Hooks
+import { usePortfolioData } from "../components/ui/portfolio/hooks/usePortfolioData";
+import { useBulkOperations } from "../components/ui/portfolio/hooks/useBulkOperations";
+import { useAccountOperations } from "../components/ui/portfolio/hooks/useAccountOperations";
+
+// Components
+import PortfolioHeader from "../components/ui/portfolio/components/PortfolioHeader";
+import TotalBalanceCard from "../components/ui/portfolio/components/TotalBalanceCard";
+import EmptyPortfolioState from "../components/ui/portfolio/components/EmptyPortfolioState";
+import AccountsGrid from "../components/ui/portfolio/components/AccountsGrid";
+import DistributionChart from "../components/ui/portfolio/components/DistributionChart";
+import ActivityHistory from "../components/ui/portfolio/components/ActivityHistory";
+
+// Modals and UI Components
 import AccountModal from "../components/ui/portfolio/AccountModal";
 import TransferModal from "../components/ui/portfolio/TransferModal";
 import BalanceAdjustModal from "../components/ui/portfolio/BalanceAdjustModal";
-import SwipeableAccountCard from "../components/ui/portfolio/SwipeableAccountCard";
 import BulkOperationsBar from "../components/ui/portfolio/BulkOperationsBar";
 import BulkConfirmationModal from "../components/ui/portfolio/BulkConfirmationModal";
-import {
-  getAccountsApi,
-  createAccountApi,
-  updateAccountApi,
-  deleteAccountApi,
-  transferBetweenAccountsApi,
-  adjustAccountBalanceApi,
-} from "../api/accountsApi";
 
-export type Account = {
-  id: string;
-  name: string;
-  type: string;
-  balance: number;
-  currency: string;
-  color?: string;
-  icon?: string;
-  isActive?: boolean;
-  userId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  bank?: string;
-  lastTransaction?: string;
-};
+// Utils
+import { getThemeColors } from "../components/ui/portfolio/hooks/portfolioUtils";
 
 const Portfolio: React.FC = () => {
   const { isDarkMode } = useTheme();
-  const { addToast } = useToast();
-  
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [highlightedAccountId, setHighlightedAccountId] = useState<string | null>(null);
+  const theme = getThemeColors(isDarkMode);
 
-  // States esistenti
-  const [showBalance, setShowBalance] = useState(true);
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [isBalanceAdjustModalOpen, setIsBalanceAdjustModalOpen] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [editingAccount, setEditingAccount] = useState<Account | undefined>();
-  const [adjustingAccount, setAdjustingAccount] = useState<Account | undefined>();
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Portfolio Data Hook
+  const {
+    accounts,
+    isLoading,
+    highlightedAccountId,
+    activityHistory,
+    totalBalance,
+    accountsChartData,
+    createAccount,
+    updateAccount,
+    deleteAccount,
+    transferBetweenAccounts,
+    adjustAccountBalance,
+    removeActivity,
+  } = usePortfolioData();
 
-  // *** NUOVI STATI per Bulk Operations ***
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
-  const [bulkOperation, setBulkOperation] = useState<'delete' | 'colorChange' | 'export' | null>(null);
-  const [isBulkConfirmationOpen, setIsBulkConfirmationOpen] = useState(false);
-  const [pendingBulkColor, setPendingBulkColor] = useState<string>('');
+  // Account Operations Hook
+  const {
+    isAccountModalOpen,
+    isTransferModalOpen,
+    isBalanceAdjustModalOpen,
+    editingAccount,
+    adjustingAccount,
+    showBalance,
+    openMenuId,
+    openAccountModal,
+    closeAccountModal,
+    openTransferModal,
+    closeTransferModal,
+    openBalanceAdjustModal,
+    closeBalanceAdjustModal,
+    toggleBalanceVisibility,
+    toggleMenu,
+  } = useAccountOperations();
 
-  // Activity History con bulk_operation aggiunto
-  const [activityHistory, setActivityHistory] = useState<Array<{
-    id: number;
-    type: 'account_created' | 'account_edited' | 'account_deleted' | 'balance_adjusted' | 'transfer' | 'bulk_operation';
-    timestamp: string;
-    description: string;
-    icon: any;
-    color: string;
-    amount?: number;
-  }>>([]);
+  // Bulk Operations Hook
+  const {
+    selectionMode,
+    selectedAccountIds,
+    bulkOperation,
+    isBulkConfirmationOpen,
+    pendingBulkColor,
+    handleSelectionChange,
+    handleSelectAll,
+    handleDeselectAll,
+    toggleSelectionMode,
+    handleBulkDelete,
+    handleBulkColorChange,
+    handleBulkExport,
+    executeBulkOperation,
+    cancelBulkOperation,
+  } = useBulkOperations(accounts, () => {}, () => {});
 
-  // *** BULK OPERATIONS HANDLERS ***
-  const handleSelectionChange = (accountId: string, selected: boolean) => {
-    setSelectedAccountIds(prev => 
-      selected 
-        ? [...prev, accountId]
-        : prev.filter(id => id !== accountId)
-    );
-  };
-
-  const handleSelectAll = () => {
-    setSelectedAccountIds(accounts.map(acc => acc.id));
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedAccountIds([]);
-    setSelectionMode(false);
-  };
-
-  const toggleSelectionMode = () => {
-    setSelectionMode(!selectionMode);
-    setSelectedAccountIds([]);
-    setOpenMenuId(null);
-  };
-
-  const handleBulkDelete = async (accountIds: string[]) => {
-    setBulkOperation('delete');
-    setIsBulkConfirmationOpen(true);
-  };
-
-  const handleBulkColorChange = async (accountIds: string[], color: string) => {
-    setPendingBulkColor(color);
-    setBulkOperation('colorChange');
-    setIsBulkConfirmationOpen(true);
-  };
-
-  const handleBulkExport = async (accountIds: string[]) => {
-    setBulkOperation('export');
-    setIsBulkConfirmationOpen(true);
-  };
-
-  const executeBulkOperation = async () => {
-    const selectedAccounts = accounts.filter(acc => selectedAccountIds.includes(acc.id));
-    
-    try {
-      switch (bulkOperation) {
-        case 'delete':
-          for (const accountId of selectedAccountIds) {
-            await deleteAccountApi(accountId);
-          }
-          setAccounts(prev => prev.filter(acc => !selectedAccountIds.includes(acc.id)));
-          
-          setActivityHistory(prev => [{
-            id: Date.now(),
-            type: 'bulk_operation',
-            timestamp: new Date().toISOString(),
-            description: `Eliminati ${selectedAccountIds.length} conti in blocco`,
-            icon: Trash2,
-            color: '#EF4444'
-          }, ...prev]);
-          
-          addToast(`${selectedAccountIds.length} conti eliminati con successo`, 'success');
-          break;
-
-        case 'colorChange':
-          const updatePromises = selectedAccountIds.map(accountId => {
-            const account = accounts.find(acc => acc.id === accountId);
-            if (account) {
-              return updateAccountApi(accountId, { ...account, color: pendingBulkColor });
-            }
-            return Promise.resolve();
-          });
-          
-          await Promise.all(updatePromises);
-          
-          setAccounts(prev => prev.map(acc => 
-            selectedAccountIds.includes(acc.id) 
-              ? { ...acc, color: pendingBulkColor }
-              : acc
-          ));
-          
-          setActivityHistory(prev => [{
-            id: Date.now(),
-            type: 'bulk_operation',
-            timestamp: new Date().toISOString(),
-            description: `Cambiato colore di ${selectedAccountIds.length} conti`,
-            icon: Edit,
-            color: pendingBulkColor
-          }, ...prev]);
-          
-          addToast(`Colore aggiornato per ${selectedAccountIds.length} conti`, 'success');
-          break;
-
-        case 'export':
-          const exportData = selectedAccounts.map(account => ({
-            name: account.name,
-            type: account.type,
-            balance: account.balance,
-            currency: account.currency,
-            bank: account.bank || '',
-            createdAt: account.createdAt
-          }));
-          
-          const dataStr = JSON.stringify(exportData, null, 2);
-          const dataBlob = new Blob([dataStr], { type: 'application/json' });
-          const url = URL.createObjectURL(dataBlob);
-          
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `conti-${new Date().toISOString().split('T')[0]}.json`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          
-          setActivityHistory(prev => [{
-            id: Date.now(),
-            type: 'bulk_operation',
-            timestamp: new Date().toISOString(),
-            description: `Esportati ${selectedAccountIds.length} conti`,
-            icon: ArrowUpRight,
-            color: '#3B82F6'
-          }, ...prev]);
-          
-          addToast(`${selectedAccountIds.length} conti esportati con successo`, 'success');
-          break;
-      }
-      
-      setSelectedAccountIds([]);
-      setSelectionMode(false);
-      setIsBulkConfirmationOpen(false);
-      setBulkOperation(null);
-      setPendingBulkColor('');
-      
-    } catch (error: any) {
-      console.error('❌ Errore operazione bulk:', error);
-      addToast('Errore durante l\'operazione multipla', 'error');
-    }
-  };
-
-  // Effects esistenti
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  useEffect(() => {
-    const highlightId = searchParams.get('highlight');
-    if (highlightId && accounts.length > 0) {
-      setHighlightedAccountId(highlightId);
-      
-      const timer = setTimeout(() => {
-        setHighlightedAccountId(null);
-        setSearchParams({});
-      }, 3000);
-      
-      setTimeout(() => {
-        const accountElement = document.getElementById(`account-${highlightId}`);
-        if (accountElement) {
-          accountElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [searchParams, setSearchParams, accounts]);
-
-  // Funzioni esistenti (invariate)
-  const loadAccounts = async () => {
-    try {
-      setIsLoading(true);
-      const apiAccounts = await getAccountsApi();
-      
-      const formattedAccounts: Account[] = apiAccounts.map(acc => ({
-        id: acc.id,
-        name: acc.name,
-        type: acc.type,
-        balance: acc.balance,
-        currency: acc.currency,
-        color: acc.color || getDefaultColorForType(acc.type),
-        icon: acc.icon || acc.type,
-        isActive: acc.isActive,
-        userId: acc.userId,
-        createdAt: acc.createdAt,
-        updatedAt: acc.updatedAt,
-        bank: '',
-        lastTransaction: acc.updatedAt
-      }));
-      
-      setAccounts(formattedAccounts);
-    } catch (error: any) {
-      console.error('❌ Errore caricamento conti:', error);
-      addToast('Errore nel caricare i conti', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'checking': return Landmark;
-      case 'savings': return PiggyBank;
-      case 'prepaid': 
-      case 'card':
-      case 'credit_card': return CreditCard;
-      case 'business':
-      case 'investment': return Building;
-      case 'cash': return Wallet;
-      default: return Wallet;
-    }
-  };
-
-  const renderAccountIcon = (account: Account) => {
-    const IconComponent = getIconForType(account.icon || account.type);
-    return IconComponent;
-  };
-
-  const getDefaultColorForType = (type: string): string => {
-    switch (type) {
-      case 'checking': return '#6366F1';
-      case 'savings': return '#10B981';
-      case 'prepaid':
-      case 'card':
-      case 'credit_card': return '#F59E0B';
-      case 'business':
-      case 'investment': return '#8B5CF6';
-      case 'cash': return '#EC4899';
-      default: return '#6366F1';
-    }
-  };
-
-  const getThemeColors = () => {
-    if (isDarkMode) {
-      return {
-        background: {
-          primary: "bg-gray-900",
-          card: "bg-gray-800",
-          cardHover: "hover:bg-gray-700",
-          secondary: "bg-gray-700",
-          glass: "bg-gray-800/60 backdrop-blur-sm"
-        },
-        text: {
-          primary: "text-gray-50",
-          secondary: "text-gray-300",
-          muted: "text-gray-400",
-          subtle: "text-gray-500"
-        },
-        border: {
-          main: "border-gray-700",
-          card: "border-gray-700",
-          cardHover: "hover:border-gray-600"
-        }
-      };
-    } else {
-      return {
-        background: {
-          primary: "bg-white",
-          card: "bg-white",
-          cardHover: "hover:bg-gray-50",
-          secondary: "bg-gray-100",
-          glass: "bg-white/60 backdrop-blur-sm"
-        },
-        text: {
-          primary: "text-gray-900",
-          secondary: "text-gray-700",
-          muted: "text-gray-600",
-          subtle: "text-gray-500"
-        },
-        border: {
-          main: "border-gray-200",
-          card: "border-gray-200",
-          cardHover: "hover:border-gray-300"
-        }
-      };
-    }
-  };
-
-  const theme = getThemeColors();
-
-  // Handlers esistenti (invariati)
+  // Account Handlers
   const handleAddAccount = () => {
-    setEditingAccount(undefined);
-    setIsAccountModalOpen(true);
+    openAccountModal();
   };
 
-  const handleEditAccount = (account: Account) => {
-    setEditingAccount(account);
-    setIsAccountModalOpen(true);
-    setOpenMenuId(null);
-  };
-
-  const handleDeleteAccount = async (accountId: string) => {
-    const account = accounts.find(acc => acc.id === accountId);
-    if (!account) return;
-
-    if (!window.confirm(`Sei sicuro di voler eliminare "${account.name}"?`)) {
-      return;
-    }
-
-    try {
-      await deleteAccountApi(accountId);
-      setAccounts(prev => prev.filter(acc => acc.id !== accountId));
-      setOpenMenuId(null);
-      
-      setActivityHistory(prev => [{
-        id: Date.now(),
-        type: 'account_deleted',
-        timestamp: new Date().toISOString(),
-        description: `Conto "${account.name}" eliminato`,
-        icon: Trash2,
-        color: '#EF4444'
-      }, ...prev]);
-      
-      addToast(`Conto "${account.name}" eliminato con successo`, 'success');
-    } catch (error: any) {
-      console.error('❌ Errore eliminazione:', error);
-      addToast('Errore durante l\'eliminazione', 'error');
-    }
+  const handleEditAccount = (account: any) => {
+    openAccountModal(account);
   };
 
   const handleSaveAccount = async (accountData: any) => {
     try {
       if (editingAccount) {
-        const updated = await updateAccountApi(editingAccount.id, {
-          name: accountData.name,
-          type: accountData.type,
-          balance: parseFloat(accountData.balance) || 0,
-          currency: accountData.currency || 'EUR',
-          color: accountData.color || getDefaultColorForType(accountData.type),
-          icon: accountData.icon || accountData.type
-        });
-        
-        const updatedAccount: Account = {
-          ...updated,
-          bank: accountData.bank || '',
-          lastTransaction: updated.updatedAt,
-          color: updated.color || getDefaultColorForType(updated.type),
-          icon: updated.icon || updated.type
-        };
-        
-        setAccounts(prev => prev.map(acc => 
-          acc.id === editingAccount.id ? updatedAccount : acc
-        ));
-        
-        setActivityHistory(prev => [{
-          id: Date.now(),
-          type: 'account_edited',
-          timestamp: new Date().toISOString(),
-          description: `Conto "${accountData.name}" modificato`,
-          icon: Edit,
-          color: '#F59E0B'
-        }, ...prev]);
-        
-        addToast(`Conto "${accountData.name}" modificato con successo`, 'success');
+        await updateAccount(editingAccount.id, accountData);
       } else {
-        const created = await createAccountApi({
-          name: accountData.name,
-          type: accountData.type,
-          balance: parseFloat(accountData.balance) || 0,
-          currency: accountData.currency || 'EUR',
-          color: accountData.color || getDefaultColorForType(accountData.type),
-          icon: accountData.icon || accountData.type
-        });
-        
-        const newAccount: Account = {
-          ...created,
-          bank: accountData.bank || '',
-          lastTransaction: created.createdAt,
-          color: created.color || getDefaultColorForType(created.type),
-          icon: created.icon || created.type
-        };
-        
-        setAccounts(prev => [...prev, newAccount]);
-        
-        setActivityHistory(prev => [{
-          id: Date.now(),
-          type: 'account_created',
-          timestamp: new Date().toISOString(),
-          description: `Conto "${accountData.name}" creato`,
-          icon: Plus,
-          color: '#10B981'
-        }, ...prev]);
-        
-        addToast(`Conto "${accountData.name}" aggiunto con successo`, 'success');
+        await createAccount(accountData);
       }
-      
-      setEditingAccount(undefined);
-      setIsAccountModalOpen(false);
-    } catch (error: any) {
-      console.error('❌ Errore salvataggio conto:', error);
-      addToast(error.message || 'Errore durante il salvataggio', 'error');
+      closeAccountModal();
+    } catch (error) {
+      // Error handling is done in the hooks
     }
+  };
+
+  const handleDeleteAccount = async (accountId: string) => {
+    await deleteAccount(accountId);
   };
 
   const handleTransfer = async (fromAccountId: string, toAccountId: string, amount: number, description?: string) => {
-    const fromAccount = accounts.find(acc => acc.id === fromAccountId);
-    const toAccount = accounts.find(acc => acc.id === toAccountId);
-    
-    if (!fromAccount || !toAccount) {
-      addToast('Conti non trovati', 'error');
-      return;
-    }
-
-    if (fromAccount.balance < amount) {
-      addToast('Fondi insufficienti', 'error');
-      return;
-    }
-
-    try {
-      await transferBetweenAccountsApi(fromAccountId, toAccountId, amount, description);
-      
-      setAccounts(prev => prev.map(acc => {
-        if (acc.id === fromAccountId) {
-          return { ...acc, balance: acc.balance - amount, lastTransaction: new Date().toISOString() };
-        }
-        if (acc.id === toAccountId) {
-          return { ...acc, balance: acc.balance + amount, lastTransaction: new Date().toISOString() };
-        }
-        return acc;
-      }));
-      
-      setActivityHistory(prev => [{
-        id: Date.now(),
-        type: 'transfer',
-        timestamp: new Date().toISOString(),
-        description: `Trasferimento di ${formatCurrency(amount)} da "${fromAccount.name}" a "${toAccount.name}"${description ? ` - ${description}` : ''}`,
-        icon: ArrowLeftRight,
-        color: '#6366F1',
-        amount: amount
-      }, ...prev]);
-      
-      addToast(`Trasferiti ${formatCurrency(amount)} da "${fromAccount.name}" a "${toAccount.name}"`, 'success');
-      setIsTransferModalOpen(false);
-    } catch (error: any) {
-      console.error('❌ Errore trasferimento:', error);
-      addToast(error.message || 'Errore durante il trasferimento', 'error');
+    const success = await transferBetweenAccounts(fromAccountId, toAccountId, amount, description);
+    if (success) {
+      closeTransferModal();
     }
   };
 
-  const handleAdjustBalance = (account: Account) => {
-    setAdjustingAccount(account);
-    setIsBalanceAdjustModalOpen(true);
-    setOpenMenuId(null);
+  const handleAdjustBalance = (account: any) => {
+    openBalanceAdjustModal(account);
   };
 
   const handleSaveBalanceAdjustment = async (accountId: string, newBalance: number, reason: string) => {
-    const account = accounts.find(acc => acc.id === accountId);
-    if (!account) return;
-    
-    const oldBalance = account.balance;
-    const difference = newBalance - oldBalance;
-
-    try {
-      await adjustAccountBalanceApi(accountId, newBalance, reason);
-      
-      setAccounts(prev => prev.map(acc =>
-        acc.id === accountId 
-          ? { ...acc, balance: newBalance, lastTransaction: new Date().toISOString() }
-          : acc
-      ));
-      
-      setActivityHistory(prev => [{
-        id: Date.now(),
-        type: 'balance_adjusted',
-        timestamp: new Date().toISOString(),
-        description: `Saldo di "${account.name}" ${difference >= 0 ? 'aumentato' : 'diminuito'} di ${formatCurrency(Math.abs(difference))} - ${reason}`,
-        icon: DollarSign,
-        color: difference >= 0 ? '#10B981' : '#EF4444',
-        amount: Math.abs(difference)
-      }, ...prev]);
-      
-      addToast(`Saldo di "${account.name}" aggiornato a ${formatCurrency(newBalance)}`, 'success');
-      setIsBalanceAdjustModalOpen(false);
-      setAdjustingAccount(undefined);
-    } catch (error: any) {
-      console.error('❌ Errore aggiustamento saldo:', error);
-      addToast(error.message || 'Errore durante l\'aggiustamento', 'error');
+    const success = await adjustAccountBalance(accountId, newBalance, reason);
+    if (success) {
+      closeBalanceAdjustModal();
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    const d = new Date(dateString);
-    return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
-  };
-
-  const formatTime = (dateString: string) => {
-    const d = new Date(dateString);
-    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   };
 
   const handleDeleteActivity = (activityId: number) => {
-    const activity = activityHistory.find(act => act.id === activityId);
-    setActivityHistory(prev => prev.filter(act => act.id !== activityId));
-    setOpenMenuId(null);
-    addToast(`Attività "${activity?.description}" rimossa dal log`, 'success');
+    removeActivity(activityId);
+    toggleMenu(null);
   };
 
-  const getAccountTypeLabel = (type: string) => {
-    switch (type) {
-      case 'checking': return 'Conto Corrente';
-      case 'savings': return 'Conto Risparmio';
-      case 'prepaid': 
-      case 'card':
-      case 'credit_card': return 'Carta';
-      case 'business': 
-      case 'investment': return 'Business';
-      case 'cash': return 'Contanti';
-      default: return 'Altro';
-    }
-  };
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-3 shadow-xl backdrop-blur-sm`}>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className={`${theme.text.primary} font-medium text-sm`} style={{ color: entry.payload.color }}>
-              {`${entry.name}: ${formatCurrency(entry.value)}`}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
-  const accountsChartData = accounts.map(account => ({
-    name: account.name,
-    value: account.balance,
-    color: account.color || getDefaultColorForType(account.type)
-  }));
-
+  // Loading State
   if (isLoading) {
     return (
       <div className={`min-h-screen ${theme.background.primary} flex items-center justify-center`}>
@@ -632,34 +148,15 @@ const Portfolio: React.FC = () => {
     <div className={`min-h-screen ${theme.background.primary} ${theme.text.primary} transition-colors duration-300`}>
       <div className="w-full h-full p-4 md:p-6 space-y-6">
         
-        {/* Header con Selection Mode Toggle */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-2">
-            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-teal-400 bg-clip-text text-transparent leading-tight">
-              Il Mio Portafoglio
-            </h1>
-            <p className={`${theme.text.muted} text-sm leading-relaxed`}>
-              Panoramica completa dei tuoi conti e disponibilità
-            </p>
-          </div>
-          
-          {/* *** NUOVO: Selection Mode Toggle *** */}
-          {accounts.length > 0 && (
-            <button 
-              onClick={toggleSelectionMode}
-              className={`${
-                selectionMode 
-                  ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/30 hover:border-amber-500/50 text-amber-400 hover:text-amber-300' 
-                  : 'bg-purple-500/20 hover:bg-purple-500/30 border-purple-500/30 hover:border-purple-500/50 text-purple-400 hover:text-purple-300'
-              } border px-3 py-2 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 text-sm`}
-            >
-              {selectionMode ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-              {selectionMode ? 'Annulla Selezione' : 'Selezione Multipla'}
-            </button>
-          )}
-        </div>
+        {/* Header */}
+        <PortfolioHeader
+          theme={theme}
+          selectionMode={selectionMode}
+          onToggleSelectionMode={toggleSelectionMode}
+          hasAccounts={accounts.length > 0}
+        />
 
-        {/* *** NUOVO: Bulk Operations Bar *** */}
+        {/* Bulk Operations Bar */}
         <BulkOperationsBar
           selectedAccountIds={selectedAccountIds}
           accounts={accounts}
@@ -670,264 +167,71 @@ const Portfolio: React.FC = () => {
           onBulkExport={handleBulkExport}
         />
 
-        {/* Total Balance Card (invariato) */}
-        <div className={`relative ${theme.background.card} ${theme.border.card} border rounded-2xl p-4 md:p-6 shadow-lg overflow-hidden group transition-all duration-300 hover:shadow-xl`}>
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-teal-500/10 opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
-          
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/25">
-                  <Wallet className="w-5 h-5 text-white" />
-                </div>
-                <h2 className={`text-lg md:text-xl font-bold ${theme.text.primary}`}>Saldo Totale</h2>
-              </div>
-              
-              <button
-                onClick={() => setShowBalance(!showBalance)}
-                className={`p-2 ${theme.background.glass} ${theme.border.card} border rounded-lg hover:bg-gray-700/50 transition-all duration-200`}
-              >
-                {showBalance ? 
-                  <Eye className="w-4 h-4 text-indigo-400" /> : 
-                  <EyeOff className="w-4 h-4 text-indigo-400" />
-                }
-              </button>
-            </div>
-            
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-              <div className="space-y-2">
-                <div className={`text-2xl md:text-3xl font-bold ${theme.text.primary} tracking-tight`}>
-                  {showBalance ? formatCurrency(totalBalance) : "••••••"}
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className={`${theme.text.muted} text-sm`}>
-                    {accounts.length} {accounts.length === 1 ? 'conto' : 'conti'}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="flex gap-2 flex-wrap">
-                <button 
-                  onClick={() => setIsTransferModalOpen(true)}
-                  disabled={accounts.length < 2}
-                  className="bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 hover:border-indigo-500/50 px-3 py-2 rounded-xl font-semibold text-indigo-400 hover:text-indigo-300 transition-all duration-200 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowLeftRight className="w-4 h-4" />
-                  Trasferisci
-                </button>
-                <button 
-                  onClick={handleAddAccount}
-                  className="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/50 px-3 py-2 rounded-xl font-semibold text-emerald-400 hover:text-emerald-300 transition-all duration-200 flex items-center gap-2 text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Aggiungi Conto
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Total Balance Card */}
+        <TotalBalanceCard
+          theme={theme}
+          totalBalance={totalBalance}
+          accountsCount={accounts.length}
+          showBalance={showBalance}
+          onToggleBalanceVisibility={toggleBalanceVisibility}
+          onOpenTransferModal={openTransferModal}
+          onAddAccount={handleAddAccount}
+          canTransfer={accounts.length >= 2}
+        />
 
-        {/* Accounts Grid o Empty State */}
+        {/* Main Content */}
         {accounts.length === 0 ? (
-          <div className={`${theme.background.card} ${theme.border.card} border rounded-2xl p-12 text-center shadow-lg`}>
-            <Wallet className={`w-16 h-16 ${theme.text.muted} mx-auto mb-4`} />
-            <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>Nessun conto</h3>
-            <p className={`${theme.text.muted} mb-6`}>Crea il tuo primo conto per iniziare a gestire il tuo portafoglio</p>
-            <button
-              onClick={handleAddAccount}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg transition-all"
-            >
-              Crea Primo Conto
-            </button>
-          </div>
+          <EmptyPortfolioState
+            theme={theme}
+            onAddAccount={handleAddAccount}
+          />
         ) : (
           <>
-            {/* *** MODIFICATO: Accounts Grid con Bulk Operations *** */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              {accounts.map((account) => {
-                const IconComponent = renderAccountIcon(account);
-                const accountColor = account.color || getDefaultColorForType(account.type);
-                const isHighlighted = highlightedAccountId === account.id;
-                const isSelected = selectedAccountIds.includes(account.id);
-                
-                return (
-                  <SwipeableAccountCard
-                    key={account.id}
-                    account={account}
-                    IconComponent={IconComponent}
-                    accountColor={accountColor}
-                    isHighlighted={isHighlighted}
-                    showBalance={showBalance}
-                    theme={theme}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    onEdit={handleEditAccount}
-                    onDelete={handleDeleteAccount}
-                    onAdjustBalance={handleAdjustBalance}
-                    onTransfer={() => setIsTransferModalOpen(true)}
-                    formatCurrency={formatCurrency}
-                    formatDate={formatDate}
-                    getAccountTypeLabel={getAccountTypeLabel}
-                    isSelected={isSelected}
-                    onSelectionChange={handleSelectionChange}
-                    selectionMode={selectionMode}
-                  />
-                );
-              })}
-            </div>
+            {/* Accounts Grid */}
+            <AccountsGrid
+              accounts={accounts}
+              theme={theme}
+              showBalance={showBalance}
+              highlightedAccountId={highlightedAccountId}
+              selectedAccountIds={selectedAccountIds}
+              selectionMode={selectionMode}
+              openMenuId={openMenuId}
+              onSelectionChange={handleSelectionChange}
+              setOpenMenuId={toggleMenu}
+              onEdit={handleEditAccount}
+              onDelete={handleDeleteAccount}
+              onAdjustBalance={handleAdjustBalance}
+              onTransfer={openTransferModal}
+            />
 
-            {/* Account Distribution Chart (invariato) */}
+            {/* Distribution Chart - Only if 2+ accounts */}
             {accounts.length > 1 && (
-              <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg shadow-purple-500/25">
-                    <PieChart className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Distribuzione Conti</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={accountsChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        innerRadius={40}
-                        paddingAngle={2}
-                      >
-                        {accountsChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  
-                  <div className="flex flex-col justify-center space-y-2">
-                    {accounts.map((account) => {
-                      const percentage = ((account.balance / totalBalance) * 100).toFixed(1);
-                      const accountColor = account.color || getDefaultColorForType(account.type);
-                      return (
-                        <div key={account.id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: accountColor }}></div>
-                            <span className={`${theme.text.secondary} truncate`}>{account.name}</span>
-                          </div>
-                          <span className={`font-semibold ${theme.text.primary} ml-2`}>{percentage}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              <DistributionChart
+                accounts={accounts}
+                accountsChartData={accountsChartData}
+                totalBalance={totalBalance}
+                theme={theme}
+              />
             )}
 
-            {/* Activity History (invariato) */}
-            <div className={`${theme.background.card} ${theme.border.card} border rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden`}>
-              <div className="p-4 border-b border-gray-700/30">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-lg shadow-amber-500/25">
-                    <History className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className={`text-base md:text-lg font-bold ${theme.text.primary}`}>Storico Attività</h3>
-                </div>
-              </div>
-              
-              <div className="h-80 overflow-y-auto p-4">
-                <div className="space-y-3">
-                  {activityHistory.length === 0 ? (
-                    <div className="text-center py-8">
-                      <History className={`w-12 h-12 ${theme.text.muted} mx-auto mb-3`} />
-                      <p className={`${theme.text.muted} text-sm`}>Nessuna attività registrata</p>
-                    </div>
-                  ) : (
-                    activityHistory.slice(0, 20).map((activity) => {
-                      const IconComponent = activity.icon;
-                      return (
-                        <div
-                          key={activity.id}
-                          className={`flex items-start gap-3 p-3 ${theme.background.secondary}/30 rounded-lg hover:bg-gray-700/30 transition-colors group`}
-                        >
-                          <div 
-                            className="p-2 rounded-lg flex-shrink-0"
-                            style={{ 
-                              backgroundColor: `${activity.color}20`, 
-                              borderColor: `${activity.color}40`,
-                            }}
-                          >
-                            <IconComponent className="w-4 h-4" style={{ color: activity.color }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`${theme.text.primary} text-sm font-medium leading-tight`}>
-                              {activity.description}
-                            </p>
-                            <p className={`${theme.text.muted} text-xs mt-1`}>
-                              {formatDate(activity.timestamp)} alle {formatTime(activity.timestamp)}
-                            </p>
-                          </div>
-                          {activity.amount && (
-                            <div className={`text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0`} 
-                                style={{ backgroundColor: `${activity.color}20`, color: activity.color }}>
-                              {formatCurrency(activity.amount)}
-                            </div>
-                          )}
-                          
-                          <div className="relative opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setOpenMenuId(openMenuId === activity.id.toString() ? null : activity.id.toString())}
-                              className={`p-1 ${theme.text.muted} hover:text-gray-50 transition-colors rounded hover:bg-gray-700/50`}
-                            >
-                              <MoreVertical className="w-3 h-3" />
-                            </button>
-                            
-                            {openMenuId === activity.id.toString() && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
-                                <div className={`absolute top-6 right-0 z-50 w-36 ${theme.background.card} ${theme.border.card} border rounded-lg shadow-xl overflow-hidden`}>
-                                  <button
-                                    onClick={() => handleDeleteActivity(activity.id)}
-                                    className={`w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                    Elimina Log
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-              
-              {activityHistory.length > 20 && (
-                <div className="p-4 border-t border-gray-700/30 text-center">
-                  <button className={`text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors`}>
-                    Mostra tutte le attività ({activityHistory.length})
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Activity History */}
+            <ActivityHistory
+              activityHistory={activityHistory}
+              theme={theme}
+              openMenuId={openMenuId}
+              onToggleMenu={toggleMenu}
+              onDeleteActivity={handleDeleteActivity}
+            />
           </>
         )}
       </div>
 
-      {/* Modals (invariati) */}
+      {/* Modals */}
       {isAccountModalOpen && (
         <AccountModal
           account={editingAccount}
           isNew={!editingAccount}
-          onClose={() => {
-            setIsAccountModalOpen(false);
-            setEditingAccount(undefined);
-          }}
+          onClose={closeAccountModal}
           onSave={handleSaveAccount}
         />
       )}
@@ -935,7 +239,7 @@ const Portfolio: React.FC = () => {
       {isTransferModalOpen && (
         <TransferModal
           accounts={accounts}
-          onClose={() => setIsTransferModalOpen(false)}
+          onClose={closeTransferModal}
           onTransfer={handleTransfer}
         />
       )}
@@ -943,26 +247,18 @@ const Portfolio: React.FC = () => {
       {isBalanceAdjustModalOpen && adjustingAccount && (
         <BalanceAdjustModal
           account={adjustingAccount}
-          onClose={() => {
-            setIsBalanceAdjustModalOpen(false);
-            setAdjustingAccount(undefined);
-          }}
+          onClose={closeBalanceAdjustModal}
           onAdjust={handleSaveBalanceAdjustment}
         />
       )}
 
-      {/* *** NUOVA: Bulk Confirmation Modal *** */}
       <BulkConfirmationModal
         isOpen={isBulkConfirmationOpen}
         operation={bulkOperation!}
         selectedAccountIds={selectedAccountIds}
         accounts={accounts}
         onConfirm={executeBulkOperation}
-        onCancel={() => {
-          setIsBulkConfirmationOpen(false);
-          setBulkOperation(null);
-          setPendingBulkColor('');
-        }}
+        onCancel={cancelBulkOperation}
         newColor={pendingBulkColor}
       />
     </div>
