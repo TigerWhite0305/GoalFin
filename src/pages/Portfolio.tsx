@@ -1,14 +1,20 @@
-// src/pages/Portfolio.tsx - CON HIGHLIGHT DA RICERCA
+// src/pages/Portfolio.tsx - AGGIUNTO Bulk Operations al Portfolio esistente
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom"; // ✅ AGGIUNTO
+import { useSearchParams } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { Wallet, CreditCard, PiggyBank, TrendingUp, Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, History, DollarSign, Building, Landmark, MoreVertical, Edit, Trash2, ArrowLeftRight, RefreshCw } from "lucide-react";
+import { 
+  Wallet, CreditCard, PiggyBank, TrendingUp, Eye, EyeOff, ArrowUpRight, 
+  ArrowDownRight, Plus, History, DollarSign, Building, Landmark, MoreVertical, 
+  Edit, Trash2, ArrowLeftRight, RefreshCw, CheckSquare, Square, Users
+} from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import AccountModal from "../components/ui/AccountModal";
 import TransferModal from "../components/ui/TransferModal";
 import BalanceAdjustModal from "../components/ui/BalanceAdjustModal";
 import SwipeableAccountCard from "../components/ui/SwipeableAccountCard";
+import BulkOperationsBar from "../components/ui/BulkOperationsBar";
+import BulkConfirmationModal from "../components/ui/BulkConfirmationModal";
 import {
   getAccountsApi,
   createAccountApi,
@@ -18,7 +24,6 @@ import {
   adjustAccountBalanceApi,
 } from "../api/accountsApi";
 
-// TIPO UNIFICATO per compatibilità con modali
 export type Account = {
   id: string;
   name: string;
@@ -39,11 +44,10 @@ const Portfolio: React.FC = () => {
   const { isDarkMode } = useTheme();
   const { addToast } = useToast();
   
-  // ✅ AGGIUNTO per gestire highlight da ricerca
   const [searchParams, setSearchParams] = useSearchParams();
   const [highlightedAccountId, setHighlightedAccountId] = useState<string | null>(null);
 
-  // States
+  // States esistenti
   const [showBalance, setShowBalance] = useState(true);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -54,10 +58,17 @@ const Portfolio: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Activity History
+  // *** NUOVI STATI per Bulk Operations ***
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [bulkOperation, setBulkOperation] = useState<'delete' | 'colorChange' | 'export' | null>(null);
+  const [isBulkConfirmationOpen, setIsBulkConfirmationOpen] = useState(false);
+  const [pendingBulkColor, setPendingBulkColor] = useState<string>('');
+
+  // Activity History con bulk_operation aggiunto
   const [activityHistory, setActivityHistory] = useState<Array<{
     id: number;
-    type: 'account_created' | 'account_edited' | 'account_deleted' | 'balance_adjusted' | 'transfer';
+    type: 'account_created' | 'account_edited' | 'account_deleted' | 'balance_adjusted' | 'transfer' | 'bulk_operation';
     timestamp: string;
     description: string;
     icon: any;
@@ -65,25 +76,160 @@ const Portfolio: React.FC = () => {
     amount?: number;
   }>>([]);
 
-  // Carica conti all'avvio
+  // *** BULK OPERATIONS HANDLERS ***
+  const handleSelectionChange = (accountId: string, selected: boolean) => {
+    setSelectedAccountIds(prev => 
+      selected 
+        ? [...prev, accountId]
+        : prev.filter(id => id !== accountId)
+    );
+  };
+
+  const handleSelectAll = () => {
+    setSelectedAccountIds(accounts.map(acc => acc.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedAccountIds([]);
+    setSelectionMode(false);
+  };
+
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedAccountIds([]);
+    setOpenMenuId(null);
+  };
+
+  const handleBulkDelete = async (accountIds: string[]) => {
+    setBulkOperation('delete');
+    setIsBulkConfirmationOpen(true);
+  };
+
+  const handleBulkColorChange = async (accountIds: string[], color: string) => {
+    setPendingBulkColor(color);
+    setBulkOperation('colorChange');
+    setIsBulkConfirmationOpen(true);
+  };
+
+  const handleBulkExport = async (accountIds: string[]) => {
+    setBulkOperation('export');
+    setIsBulkConfirmationOpen(true);
+  };
+
+  const executeBulkOperation = async () => {
+    const selectedAccounts = accounts.filter(acc => selectedAccountIds.includes(acc.id));
+    
+    try {
+      switch (bulkOperation) {
+        case 'delete':
+          for (const accountId of selectedAccountIds) {
+            await deleteAccountApi(accountId);
+          }
+          setAccounts(prev => prev.filter(acc => !selectedAccountIds.includes(acc.id)));
+          
+          setActivityHistory(prev => [{
+            id: Date.now(),
+            type: 'bulk_operation',
+            timestamp: new Date().toISOString(),
+            description: `Eliminati ${selectedAccountIds.length} conti in blocco`,
+            icon: Trash2,
+            color: '#EF4444'
+          }, ...prev]);
+          
+          addToast(`${selectedAccountIds.length} conti eliminati con successo`, 'success');
+          break;
+
+        case 'colorChange':
+          const updatePromises = selectedAccountIds.map(accountId => {
+            const account = accounts.find(acc => acc.id === accountId);
+            if (account) {
+              return updateAccountApi(accountId, { ...account, color: pendingBulkColor });
+            }
+            return Promise.resolve();
+          });
+          
+          await Promise.all(updatePromises);
+          
+          setAccounts(prev => prev.map(acc => 
+            selectedAccountIds.includes(acc.id) 
+              ? { ...acc, color: pendingBulkColor }
+              : acc
+          ));
+          
+          setActivityHistory(prev => [{
+            id: Date.now(),
+            type: 'bulk_operation',
+            timestamp: new Date().toISOString(),
+            description: `Cambiato colore di ${selectedAccountIds.length} conti`,
+            icon: Edit,
+            color: pendingBulkColor
+          }, ...prev]);
+          
+          addToast(`Colore aggiornato per ${selectedAccountIds.length} conti`, 'success');
+          break;
+
+        case 'export':
+          const exportData = selectedAccounts.map(account => ({
+            name: account.name,
+            type: account.type,
+            balance: account.balance,
+            currency: account.currency,
+            bank: account.bank || '',
+            createdAt: account.createdAt
+          }));
+          
+          const dataStr = JSON.stringify(exportData, null, 2);
+          const dataBlob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(dataBlob);
+          
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `conti-${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          
+          setActivityHistory(prev => [{
+            id: Date.now(),
+            type: 'bulk_operation',
+            timestamp: new Date().toISOString(),
+            description: `Esportati ${selectedAccountIds.length} conti`,
+            icon: ArrowUpRight,
+            color: '#3B82F6'
+          }, ...prev]);
+          
+          addToast(`${selectedAccountIds.length} conti esportati con successo`, 'success');
+          break;
+      }
+      
+      setSelectedAccountIds([]);
+      setSelectionMode(false);
+      setIsBulkConfirmationOpen(false);
+      setBulkOperation(null);
+      setPendingBulkColor('');
+      
+    } catch (error: any) {
+      console.error('❌ Errore operazione bulk:', error);
+      addToast('Errore durante l\'operazione multipla', 'error');
+    }
+  };
+
+  // Effects esistenti
   useEffect(() => {
     loadAccounts();
   }, []);
 
-  // ✅ AGGIUNTO - Gestisce highlight da ricerca
   useEffect(() => {
     const highlightId = searchParams.get('highlight');
     if (highlightId && accounts.length > 0) {
       setHighlightedAccountId(highlightId);
       
-      // Rimuovi l'highlight dopo 3 secondi
       const timer = setTimeout(() => {
         setHighlightedAccountId(null);
-        // Rimuovi il parametro dall'URL senza ricaricare la pagina
         setSearchParams({});
       }, 3000);
       
-      // Scroll al conto evidenziato se esiste
       setTimeout(() => {
         const accountElement = document.getElementById(`account-${highlightId}`);
         if (accountElement) {
@@ -92,13 +238,13 @@ const Portfolio: React.FC = () => {
             block: 'center' 
           });
         }
-      }, 100); // Piccolo delay per assicurarsi che il DOM sia renderizzato
+      }, 100);
       
       return () => clearTimeout(timer);
     }
   }, [searchParams, setSearchParams, accounts]);
 
-  // LOAD ACCOUNTS corretto con gestione fallback
+  // Funzioni esistenti (invariate)
   const loadAccounts = async () => {
     try {
       setIsLoading(true);
@@ -121,7 +267,6 @@ const Portfolio: React.FC = () => {
       }));
       
       setAccounts(formattedAccounts);
-      console.log('✅ Conti caricati:', formattedAccounts);
     } catch (error: any) {
       console.error('❌ Errore caricamento conti:', error);
       addToast('Errore nel caricare i conti', 'error');
@@ -130,7 +275,6 @@ const Portfolio: React.FC = () => {
     }
   };
 
-  // ICON HELPERS aggiornati
   const getIconForType = (type: string) => {
     switch (type) {
       case 'checking': return Landmark;
@@ -212,7 +356,7 @@ const Portfolio: React.FC = () => {
 
   const theme = getThemeColors();
 
-  // Handlers (resto del codice rimane uguale)
+  // Handlers esistenti (invariati)
   const handleAddAccount = () => {
     setEditingAccount(undefined);
     setIsAccountModalOpen(true);
@@ -467,7 +611,6 @@ const Portfolio: React.FC = () => {
   };
 
   const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
-
   const accountsChartData = accounts.map(account => ({
     name: account.name,
     value: account.balance,
@@ -489,7 +632,7 @@ const Portfolio: React.FC = () => {
     <div className={`min-h-screen ${theme.background.primary} ${theme.text.primary} transition-colors duration-300`}>
       <div className="w-full h-full p-4 md:p-6 space-y-6">
         
-        {/* Header */}
+        {/* Header con Selection Mode Toggle */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-2">
             <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-teal-400 bg-clip-text text-transparent leading-tight">
@@ -499,9 +642,35 @@ const Portfolio: React.FC = () => {
               Panoramica completa dei tuoi conti e disponibilità
             </p>
           </div>
+          
+          {/* *** NUOVO: Selection Mode Toggle *** */}
+          {accounts.length > 0 && (
+            <button 
+              onClick={toggleSelectionMode}
+              className={`${
+                selectionMode 
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/30 hover:border-amber-500/50 text-amber-400 hover:text-amber-300' 
+                  : 'bg-purple-500/20 hover:bg-purple-500/30 border-purple-500/30 hover:border-purple-500/50 text-purple-400 hover:text-purple-300'
+              } border px-3 py-2 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 text-sm`}
+            >
+              {selectionMode ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+              {selectionMode ? 'Annulla Selezione' : 'Selezione Multipla'}
+            </button>
+          )}
         </div>
 
-        {/* Total Balance Card */}
+        {/* *** NUOVO: Bulk Operations Bar *** */}
+        <BulkOperationsBar
+          selectedAccountIds={selectedAccountIds}
+          accounts={accounts}
+          onDeselectAll={handleDeselectAll}
+          onSelectAll={handleSelectAll}
+          onBulkDelete={handleBulkDelete}
+          onBulkColorChange={handleBulkColorChange}
+          onBulkExport={handleBulkExport}
+        />
+
+        {/* Total Balance Card (invariato) */}
         <div className={`relative ${theme.background.card} ${theme.border.card} border rounded-2xl p-4 md:p-6 shadow-lg overflow-hidden group transition-all duration-300 hover:shadow-xl`}>
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-teal-500/10 opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
           
@@ -574,12 +743,13 @@ const Portfolio: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Accounts Grid - CON SWIPE GESTURES */}
+            {/* *** MODIFICATO: Accounts Grid con Bulk Operations *** */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {accounts.map((account) => {
                 const IconComponent = renderAccountIcon(account);
                 const accountColor = account.color || getDefaultColorForType(account.type);
                 const isHighlighted = highlightedAccountId === account.id;
+                const isSelected = selectedAccountIds.includes(account.id);
                 
                 return (
                   <SwipeableAccountCard
@@ -599,12 +769,15 @@ const Portfolio: React.FC = () => {
                     formatCurrency={formatCurrency}
                     formatDate={formatDate}
                     getAccountTypeLabel={getAccountTypeLabel}
+                    isSelected={isSelected}
+                    onSelectionChange={handleSelectionChange}
+                    selectionMode={selectionMode}
                   />
                 );
               })}
             </div>
 
-            {/* Account Distribution Chart */}
+            {/* Account Distribution Chart (invariato) */}
             {accounts.length > 1 && (
               <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
                 <div className="flex items-center gap-3 mb-4">
@@ -654,7 +827,7 @@ const Portfolio: React.FC = () => {
               </div>
             )}
 
-            {/* Activity History */}
+            {/* Activity History (invariato) */}
             <div className={`${theme.background.card} ${theme.border.card} border rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden`}>
               <div className="p-4 border-b border-gray-700/30">
                 <div className="flex items-center gap-3">
@@ -746,7 +919,7 @@ const Portfolio: React.FC = () => {
         )}
       </div>
 
-      {/* Modals */}
+      {/* Modals (invariati) */}
       {isAccountModalOpen && (
         <AccountModal
           account={editingAccount}
@@ -777,6 +950,21 @@ const Portfolio: React.FC = () => {
           onAdjust={handleSaveBalanceAdjustment}
         />
       )}
+
+      {/* *** NUOVA: Bulk Confirmation Modal *** */}
+      <BulkConfirmationModal
+        isOpen={isBulkConfirmationOpen}
+        operation={bulkOperation!}
+        selectedAccountIds={selectedAccountIds}
+        accounts={accounts}
+        onConfirm={executeBulkOperation}
+        onCancel={() => {
+          setIsBulkConfirmationOpen(false);
+          setBulkOperation(null);
+          setPendingBulkColor('');
+        }}
+        newColor={pendingBulkColor}
+      />
     </div>
   );
 };

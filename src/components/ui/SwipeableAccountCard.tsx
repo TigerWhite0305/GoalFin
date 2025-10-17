@@ -1,6 +1,6 @@
-// src/components/ui/SwipeableAccountCard.tsx - Fix per mostrare tutti i bottoni
+// src/components/ui/SwipeableAccountCard.tsx - Enhanced con checkbox per bulk operations
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Edit, Trash2, DollarSign, ArrowLeftRight } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, DollarSign, ArrowLeftRight, CheckSquare, Square } from 'lucide-react';
 
 interface SwipeableAccountCardProps {
   account: any;
@@ -18,6 +18,10 @@ interface SwipeableAccountCardProps {
   formatCurrency: (amount: number) => string;
   formatDate: (date: string) => string;
   getAccountTypeLabel: (type: string) => string;
+  // Nuove props per bulk operations
+  isSelected?: boolean;
+  onSelectionChange?: (accountId: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
@@ -35,7 +39,10 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
   onTransfer,
   formatCurrency,
   formatDate,
-  getAccountTypeLabel
+  getAccountTypeLabel,
+  isSelected = false,
+  onSelectionChange,
+  selectionMode = false
 }) => {
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
@@ -44,9 +51,8 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Aumentato il limite di swipe per mostrare tutti e 4 i bottoni
-  const SWIPE_LIMIT = 180; // Era 120, ora 180 per 4 bottoni + spacing
-  const TRIGGER_THRESHOLD = 60; // Soglia per attivare lo swipe
+  const SWIPE_LIMIT = 180;
+  const TRIGGER_THRESHOLD = 60;
 
   // Check if mobile
   useEffect(() => {
@@ -66,23 +72,21 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
   }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!isMobile) return;
+    if (!isMobile || selectionMode) return; // Disabilita swipe in selection mode
     setStartX(e.touches[0].clientX);
     setCurrentX(0);
     setIsDragging(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isMobile || !isDragging) return;
+    if (!isMobile || !isDragging || selectionMode) return;
     
     const touchX = e.touches[0].clientX;
     const diff = startX - touchX;
     
-    // Solo swipe verso sinistra
     if (diff > 0) {
-      setCurrentX(-Math.min(diff, SWIPE_LIMIT)); // Usa il nuovo limite
+      setCurrentX(-Math.min(diff, SWIPE_LIMIT));
       
-      // Previeni scroll se swipe orizzontale significativo
       if (diff > 20) {
         e.preventDefault();
       }
@@ -90,16 +94,15 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isMobile) return;
+    if (!isMobile || selectionMode) return;
     
     setIsDragging(false);
     const endX = e.changedTouches[0].clientX;
     const diff = startX - endX;
     
-    // Se swipe verso sinistra di almeno TRIGGER_THRESHOLD
     if (diff > TRIGGER_THRESHOLD) {
       setIsSwipeActive(true);
-      setCurrentX(-SWIPE_LIMIT); // Usa il nuovo limite
+      setCurrentX(-SWIPE_LIMIT);
     } else {
       setIsSwipeActive(false);
       setCurrentX(0);
@@ -118,13 +121,28 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
     setIsDragging(false);
   };
 
+  const handleCardClick = () => {
+    if (selectionMode && onSelectionChange) {
+      onSelectionChange(account.id, !isSelected);
+    } else if (isMobile && isSwipeActive) {
+      resetSwipe();
+    }
+  };
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSelectionChange) {
+      onSelectionChange(account.id, !isSelected);
+    }
+  };
+
   return (
     <div 
       className="relative rounded-xl overflow-hidden"
       id={`account-${account.id}`}
     >
-      {/* Actions background - Solo mobile con più spazio per 4 bottoni */}
-      {isMobile && (
+      {/* Actions background - Solo mobile e non in selection mode */}
+      {isMobile && !selectionMode && (
         <div className={`absolute inset-0 bg-gradient-to-l from-red-500 to-orange-500 rounded-xl flex items-center justify-end px-3 gap-2 transition-opacity duration-200 ${
           isSwipeActive || currentX < -20 ? 'opacity-100' : 'opacity-0'
         }`}>
@@ -162,19 +180,52 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
           isHighlighted 
             ? 'ring-4 ring-blue-500/50 shadow-blue-500/25 shadow-2xl scale-105 z-10' 
             : ''
+        } ${
+          isSelected 
+            ? 'ring-2 ring-indigo-400/50 bg-indigo-500/5' 
+            : ''
+        } ${
+          selectionMode 
+            ? 'cursor-pointer' 
+            : ''
         }`}
         style={{
-          transform: isMobile ? `translateX(${currentX}px)` : 'none',
+          transform: isMobile && !selectionMode ? `translateX(${currentX}px)` : 'none',
           transition: isDragging ? 'none' : 'transform 0.3s ease-out'
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={() => isMobile && isSwipeActive && resetSwipe()}
+        onClick={handleCardClick}
       >
+        {/* Selection checkbox - Visibile solo in selection mode */}
+        {selectionMode && (
+          <div className="absolute top-3 left-3 z-20">
+            <button
+              onClick={handleCheckboxClick}
+              className={`p-1 rounded-md transition-all ${
+                isSelected 
+                  ? 'bg-indigo-500 text-white' 
+                  : `bg-gray-700/80 ${theme.text.muted} hover:text-indigo-400`
+              }`}
+            >
+              {isSelected ? (
+                <CheckSquare className="w-5 h-5" />
+              ) : (
+                <Square className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Highlight overlay */}
         {isHighlighted && (
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 animate-pulse rounded-xl" />
+        )}
+        
+        {/* Selection overlay */}
+        {isSelected && (
+          <div className="absolute inset-0 bg-indigo-500/5 rounded-xl" />
         )}
         
         {/* Hover overlay */}
@@ -182,7 +233,7 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
              style={{ background: `linear-gradient(135deg, ${accountColor}20, transparent)` }} />
         
         {/* Card Content */}
-        <div className="relative z-10">
+        <div className={`relative z-10 ${selectionMode ? 'pl-6' : ''}`}>
           <div className="flex items-center justify-between mb-3">
             <div 
               className="p-2 rounded-xl border shadow-sm"
@@ -200,53 +251,58 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
                 {getAccountTypeLabel(account.type)}
               </span>
               
-              {/* Menu 3 punti - Solo desktop */}
-              <div className="relative hidden md:block">
-                <button
-                  onClick={() => setOpenMenuId(openMenuId === account.id ? null : account.id)}
-                  className={`p-1 ${theme.text.muted} hover:text-gray-50 transition-colors rounded hover:bg-gray-700/50`}
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-                
-                {openMenuId === account.id && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
-                    <div className={`absolute top-6 right-0 z-50 w-44 ${theme.background.card} ${theme.border.card} border rounded-lg shadow-xl overflow-hidden`}>
-                      <button
-                        onClick={() => {
-                          onEdit(account);
-                          setOpenMenuId(null);
-                        }}
-                        className={`w-full px-3 py-2 text-left text-indigo-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
-                      >
-                        <Edit className="w-3 h-3" />
-                        Modifica Conto
-                      </button>
-                      <button
-                        onClick={() => {
-                          onAdjustBalance(account);
-                          setOpenMenuId(null);
-                        }}
-                        className={`w-full px-3 py-2 text-left text-amber-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
-                      >
-                        <DollarSign className="w-3 h-3" />
-                        Correggi Saldo
-                      </button>
-                      <button
-                        onClick={() => {
-                          onDelete(account.id);
-                          setOpenMenuId(null);
-                        }}
-                        className={`w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Elimina Conto
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+              {/* Menu 3 punti - Solo desktop e non in selection mode */}
+              {!selectionMode && (
+                <div className="relative hidden md:block">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(openMenuId === account.id ? null : account.id);
+                    }}
+                    className={`p-1 ${theme.text.muted} hover:text-gray-50 transition-colors rounded hover:bg-gray-700/50`}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  
+                  {openMenuId === account.id && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+                      <div className={`absolute top-6 right-0 z-50 w-44 ${theme.background.card} ${theme.border.card} border rounded-lg shadow-xl overflow-hidden`}>
+                        <button
+                          onClick={() => {
+                            onEdit(account);
+                            setOpenMenuId(null);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-indigo-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
+                        >
+                          <Edit className="w-3 h-3" />
+                          Modifica Conto
+                        </button>
+                        <button
+                          onClick={() => {
+                            onAdjustBalance(account);
+                            setOpenMenuId(null);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-amber-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
+                        >
+                          <DollarSign className="w-3 h-3" />
+                          Correggi Saldo
+                        </button>
+                        <button
+                          onClick={() => {
+                            onDelete(account.id);
+                            setOpenMenuId(null);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2 text-sm`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Elimina Conto
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           
@@ -270,8 +326,8 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
           )}
         </div>
 
-        {/* Swipe progress indicator - Aggiornato per riflettere il nuovo limite */}
-        {isMobile && isDragging && currentX < -10 && (
+        {/* Swipe progress indicator - Solo se non in selection mode */}
+        {isMobile && isDragging && currentX < -10 && !selectionMode && (
           <div className="absolute top-2 left-2 flex items-center gap-2 text-xs text-white/80 bg-black/30 px-2 py-1 rounded-full">
             <ArrowLeftRight className="w-3 h-3" />
             <span>
@@ -280,10 +336,17 @@ const SwipeableAccountCard: React.FC<SwipeableAccountCardProps> = ({
           </div>
         )}
 
-        {/* Swipe hint - Solo mobile quando non attivo */}
-        {isMobile && !isSwipeActive && !isDragging && (
+        {/* Swipe hint - Solo mobile quando non attivo e non in selection mode */}
+        {isMobile && !isSwipeActive && !isDragging && !selectionMode && (
           <div className="absolute bottom-2 right-2 text-xs text-gray-400 opacity-50">
             ← Scorri
+          </div>
+        )}
+
+        {/* Selection mode indicator */}
+        {selectionMode && (
+          <div className="absolute bottom-2 right-2 text-xs text-indigo-400 opacity-70">
+            Tocca per selezionare
           </div>
         )}
       </div>
