@@ -1,6 +1,7 @@
 // src/components/ui/portfolio/hooks/useAnalytics.ts
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../../../context/ToastContext';
+import { getToken } from '../../../../utils/tokenStorage'; // Importa la funzione corretta
 
 export interface TrendData {
   date: string;
@@ -95,7 +96,7 @@ export const useAnalytics = (autoRefresh: boolean = true) => {
       
       setError(null);
 
-      const token = localStorage.getItem('token');
+      const token = getToken(); // Usa la funzione del tuo sistema
       console.log('Token found:', token ? 'Yes' : 'No'); // Debug log
       
       if (!token) {
@@ -156,7 +157,7 @@ export const useAnalytics = (autoRefresh: boolean = true) => {
   // Fetch individual endpoints (per ottimizzazioni future)
   const fetchTrends = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await fetch(`${API_BASE}/analytics/trends`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -173,7 +174,7 @@ export const useAnalytics = (autoRefresh: boolean = true) => {
 
   const fetchVariations = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await fetch(`${API_BASE}/analytics/variations`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -190,7 +191,7 @@ export const useAnalytics = (autoRefresh: boolean = true) => {
 
   const fetchCurrencies = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await fetch(`${API_BASE}/analytics/currencies`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });

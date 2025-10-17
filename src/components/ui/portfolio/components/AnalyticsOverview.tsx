@@ -154,37 +154,54 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({ theme }) => {
 
         {/* Conti più performanti */}
         <div className={`${theme.background.card} ${theme.border.card} border rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-500" />
-              <span className={`${theme.text.secondary} text-sm font-medium`}>
-                Migliore Performance
-              </span>
-            </div>
-          </div>
-          
-          {data?.variations.variationsByType && Object.keys(data.variations.variationsByType).length > 0 ? (
+          {data?.variations?.variationsByType && Object.keys(data.variations.variationsByType).length > 0 ? (
             (() => {
               const bestType = Object.values(data.variations.variationsByType)
                 .sort((a, b) => b.variation - a.variation)[0];
               
+              const isPositive = bestType.variation >= 0;
+              
               return (
-                <div>
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {isPositive ? (
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <TrendingDown className="w-4 h-4 text-red-500" />
+                      )}
+                      <span className={`${theme.text.secondary} text-sm font-medium`}>
+                        {isPositive ? 'Migliore Performance' : 'Performance Meno Negativa'}
+                      </span>
+                    </div>
+                  </div>
+                  
                   <div className="flex items-end gap-2">
-                    <span className={`text-2xl font-bold ${theme.text.primary}`}>
-                      +{bestType.variation.toFixed(1)}%
+                    <span className={`text-2xl font-bold ${isPositive ? theme.text.primary : 'text-red-500'}`}>
+                      {isPositive ? '+' : ''}{bestType.variation.toFixed(1)}%
                     </span>
                   </div>
                   <div className={`${theme.text.muted} text-xs mt-2 capitalize`}>
                     {bestType.type} ({bestType.accountCount} conti)
                   </div>
-                </div>
+                </>
               );
             })()
           ) : (
-            <div className={`${theme.text.muted} text-sm`}>
-              Dati insufficienti
-            </div>
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <span className={`${theme.text.secondary} text-sm font-medium`}>
+                    Performance
+                  </span>
+                </div>
+              </div>
+              
+              <div className={`${theme.text.muted} text-sm`}>
+                Dati insufficienti
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -207,7 +224,10 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({ theme }) => {
                 dataKey="date" 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: theme.text.muted.replace('text-', ''), fontSize: 12 }}
+                tick={{ 
+                  fill: theme.background.card.includes('gray-800') ? '#D1D5DB' : '#374151', 
+                  fontSize: 12 
+                }}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return `${date.getDate()}/${date.getMonth() + 1}`;
@@ -216,7 +236,10 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({ theme }) => {
               <YAxis 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: theme.text.muted.replace('text-', ''), fontSize: 12 }}
+                tick={{ 
+                  fill: theme.background.card.includes('gray-800') ? '#D1D5DB' : '#374151', 
+                  fontSize: 12 
+                }}
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
               />
               <Tooltip 
@@ -224,7 +247,8 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({ theme }) => {
                   backgroundColor: theme.background.card.includes('gray-800') ? '#1f2937' : '#ffffff',
                   border: '1px solid #374151',
                   borderRadius: '8px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  color: theme.background.card.includes('gray-800') ? '#ffffff' : '#000000'
                 }}
                 labelFormatter={(value) => new Date(value).toLocaleDateString('it-IT')}
                 formatter={(value: number) => [formatCurrency(value), 'Totale']}

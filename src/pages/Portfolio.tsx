@@ -2,6 +2,7 @@
 import React from "react";
 import { RefreshCw } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { hasToken } from "../utils/tokenStorage"; // Importa hasToken
 
 // Custom Hooks
 import { usePortfolioData } from "../components/ui/portfolio/hooks/usePortfolioData";
@@ -180,11 +181,6 @@ const Portfolio: React.FC = () => {
           canTransfer={accounts.length >= 2}
         />
 
-        {/* Analytics Overview - Solo se ci sono conti e user è loggato */}
-        {accounts.length > 0 && localStorage.getItem('token') && (
-          <AnalyticsOverview theme={theme} />
-        )}
-
         {/* Main Content */}
         {accounts.length === 0 ? (
           <EmptyPortfolioState
@@ -209,6 +205,9 @@ const Portfolio: React.FC = () => {
               onAdjustBalance={handleAdjustBalance}
               onTransfer={openTransferModal}
             />
+
+            {/* Analytics Overview - Dopo gli account */}
+            <AnalyticsOverview theme={theme} />
 
             {/* Distribution Chart - Only if 2+ accounts */}
             {accounts.length > 1 && (
